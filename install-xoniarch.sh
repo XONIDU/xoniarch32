@@ -1,7 +1,6 @@
 #!/bin/bash
-# XONIARCH32 - INSTALADOR COMPLETO DESDE LIVE USB
+# XONIARCH32 - INSTALADOR COMPLETO DESDE LIVE USB (CORREGIDO)
 # Autor: Darian Alberto Camacho Salas
-# Repositorio: https://github.com/XONIDU/xoniarch32
 
 set -e
 
@@ -10,50 +9,32 @@ YELLOW='\033[1;33m'
 RED='\033[0;31m'
 NC='\033[0m'
 
-# ============================================
-# FUNCIONES AUXILIARES
-# ============================================
 error_exit() {
     echo -e "${RED}[ERROR] $1${NC}" >&2
     exit 1
 }
 
-info() {
-    echo -e "${GREEN}[INFO] $1${NC}"
-}
+info() { echo -e "${GREEN}[INFO] $1${NC}"; }
+warn() { echo -e "${YELLOW}[AVISO] $1${NC}"; }
 
-warn() {
-    echo -e "${YELLOW}[AVISO] $1${NC}"
-}
-
-# ============================================
-# VERIFICAR QUE SE EJECUTA EN LIVE USB
-# ============================================
+# Verificar live USB
 if [ ! -d /run/archiso ]; then
     error_exit "Este script debe ejecutarse desde el live USB de Arch Linux 32 bits."
 fi
 
-# ============================================
-# SELECCIÓN DE MIRROR FUNCIONAL (archlinux32)
-# ============================================
-info "Buscando un mirror funcional de archlinux32..."
-
+# Buscar mirror funcional
+info "Buscando mirror funcional de archlinux32..."
 MIRRORS=(
     "https://mirror.archlinux32.org"
     "https://ftp.halifax.rwth-aachen.de/archlinux32"
     "https://mirror.cyberbits.eu/archlinux32"
     "https://mirror.ubnt.net/archlinux32"
     "https://mirror.accum.se/mirror/archlinux32"
-    "https://de.mirror.archlinux32.org"
-    "https://gr.mirror.archlinux32.org"
-    "https://mirror.clarkson.edu/archlinux32"
-    "https://mirror.math.princeton.edu/pub/archlinux32"
 )
-
 WORKING_MIRROR=""
 for mirror in "${MIRRORS[@]}"; do
     echo -n "Probando $mirror... "
-    if curl -s --head --max-time 5 "${mirror}/core/os/i686/core.db" > /dev/null 2>&1; then
+    if curl -s --head --max-time 5 "${mirror}/core/os/i686/core.db" >/dev/null 2>&1; then
         echo -e "${GREEN}OK${NC}"
         WORKING_MIRROR="$mirror"
         break
@@ -61,17 +42,11 @@ for mirror in "${MIRRORS[@]}"; do
         echo -e "${RED}FALLÓ${NC}"
     fi
 done
-
-if [ -z "$WORKING_MIRROR" ]; then
-    error_exit "No se encontró ningún mirror funcional. Verifica tu conexión a internet."
-fi
-
+[ -z "$WORKING_MIRROR" ] && error_exit "No se encontró mirror funcional."
 info "Mirror seleccionado: $WORKING_MIRROR"
 
-# ============================================
-# CONFIGURAR PACMAN TEMPORALMENTE
-# ============================================
-cat > /etc/pacman.conf << EOF
+# Configurar pacman
+cat > /etc/pacman.conf <<EOF
 [options]
 HoldPkg         = pacman glibc
 Architecture    = i686
@@ -81,49 +56,37 @@ RemoteFileSigLevel = Never
 ParallelDownloads = 5
 Color
 CheckSpace
-
 [core]
 Server = $WORKING_MIRROR/\$arch/\$repo
-
 [extra]
 Server = $WORKING_MIRROR/\$arch/\$repo
-
 [community]
 Server = $WORKING_MIRROR/\$arch/\$repo
 EOF
 
-# ============================================
-# INICIALIZAR CLAVES PGP (evita errores de firma)
-# ============================================
+# Inicializar claves
 info "Inicializando claves PGP..."
 pacman-key --init 2>/dev/null || true
 pacman-key --populate archlinux32 2>/dev/null || true
 pacman -Sy --noconfirm archlinux32-keyring 2>/dev/null || true
 
-# ============================================
-# SELECCIONAR DISCO DE INSTALACIÓN
-# ============================================
+# Mostrar discos y pedir selección
 clear
 echo -e "${GREEN}========================================${NC}"
 echo -e "${GREEN}   XONIARCH32 - INSTALADOR COMPLETO    ${NC}"
-echo -e "${GREEN}========================================${NC}"
-echo ""
+echo -e "${GREEN}========================================${NC}\n"
 echo -e "${YELLOW}Discos disponibles:${NC}"
 lsblk -d -o NAME,SIZE,MODEL,TYPE | grep -E "disk|NAME"
 echo ""
-
 read -p "¿En qué disco quieres instalar Xoniarch32? (ej: sda): " DISK
 if [ -z "$DISK" ]; then
     error_exit "No se seleccionó ningún disco."
 fi
-
 if [ ! -b "/dev/$DISK" ]; then
     error_exit "El disco /dev/$DISK no existe."
 fi
 
-# ============================================
-# CONFIRMAR BORRADO
-# ============================================
+# Confirmar borrado
 echo ""
 echo -e "${RED}¡ATENCIÓN! Se borrarán TODOS los datos en /dev/$DISK${NC}"
 lsblk "/dev/$DISK"
@@ -133,21 +96,18 @@ if [ "$CONFIRM" != "YES" ]; then
     error_exit "Instalación cancelada."
 fi
 
-# ============================================
-# OPCIÓN DE PARTICIONADO
-# ============================================
+# Elegir particionado
 echo ""
 echo "Elige el tipo de particionado:"
 echo "1) Automático (una partición root + swap opcional)"
-echo "2) Manual (usar fdisk/parted tú mismo, luego continuar)"
+echo "2) Manual (usar fdisk tú mismo)"
 read -p "Opción [1/2]: " PART_OPT
 
 if [ "$PART_OPT" = "1" ]; then
-    # Particionado automático
     read -p "¿Crear partición swap? (s/n): " SWAP_OPT
     if [[ "$SWAP_OPT" =~ ^[Ss]$ ]]; then
         read -p "Tamaño de swap en GB (ej: 1): " SWAP_SIZE
-        if [ -z "$SWAP_SIZE" ]; then SWAP_SIZE=1; fi
+        [ -z "$SWAP_SIZE" ] && SWAP_SIZE=1
         info "Particionando /dev/$DISK con swap de ${SWAP_SIZE}G..."
         parted "/dev/$DISK" mklabel msdos
         parted "/dev/$DISK" mkpart primary linux-swap 1MiB "${SWAP_SIZE}GiB"
@@ -163,124 +123,74 @@ if [ "$PART_OPT" = "1" ]; then
         ROOT_PART="${DISK}1"
         SWAP_PART=""
     fi
-
-    # Formatear
-    info "Formateando particiones..."
     mkfs.ext4 -F "/dev/$ROOT_PART"
-    if [ -n "$SWAP_PART" ]; then
-        mkswap "/dev/$SWAP_PART"
-    fi
+    [ -n "$SWAP_PART" ] && mkswap "/dev/$SWAP_PART"
 else
-    # Particionado manual
-    info "Abriendo fdisk para particionado manual. Cuando termines, escribe 'exit' para continuar."
+    info "Abriendo fdisk. Cuando termines, escribe 'exit' para continuar."
     fdisk "/dev/$DISK"
     echo ""
     lsblk "/dev/$DISK"
     read -p "Indica la partición raíz (ej: ${DISK}2): " ROOT_PART
-    if [ -z "$ROOT_PART" ]; then error_exit "No se indicó partición raíz."; fi
-    read -p "Indica la partición swap (dejar vacío si no hay): " SWAP_PART
+    [ -z "$ROOT_PART" ] && error_exit "No se indicó partición raíz."
+    read -p "Indica la partición swap (vacío si no hay): " SWAP_PART
 fi
 
-# ============================================
-# MONTAR SISTEMA
-# ============================================
-info "Montando sistema en /mnt..."
+# Montar
+info "Montando sistema..."
 mount "/dev/$ROOT_PART" /mnt
-if [ -n "$SWAP_PART" ]; then
-    swapon "/dev/$SWAP_PART" 2>/dev/null || true
-fi
+[ -n "$SWAP_PART" ] && swapon "/dev/$SWAP_PART" 2>/dev/null || true
 
-# ============================================
-# INSTALAR SISTEMA BASE
-# ============================================
-info "Instalando sistema base (esto puede tardar varios minutos)..."
+# Instalar base
+info "Instalando sistema base (puede tardar)..."
 pacstrap /mnt base base-devel linux-firmware grub networkmanager nano sudo git
 
-# ============================================
-# GENERAR FSTAB
-# ============================================
-info "Generando fstab..."
+# Fstab
 genfstab -U /mnt >> /mnt/etc/fstab
 
-# ============================================
-# CHROOT Y CONFIGURACIÓN INICIAL
-# ============================================
-info "Configurando el sistema..."
-
-cat > /mnt/root/chroot-config.sh << 'EOF'
+# Configuración inicial en chroot
+cat > /mnt/root/chroot-config.sh << 'INNER'
 #!/bin/bash
-# Configuración dentro del chroot
-
-# Zona horaria
 ln -sf /usr/share/zoneinfo/America/Mexico_City /etc/localtime
 hwclock --systohc
-
-# Localización
 echo "es_MX.UTF-8 UTF-8" >> /etc/locale.gen
 locale-gen
 echo "LANG=es_MX.UTF-8" > /etc/locale.conf
 echo "KEYMAP=es" > /etc/vconsole.conf
-
-# Hostname
 echo "xoniarch" > /etc/hostname
 cat > /etc/hosts << HOSTS
 127.0.0.1   localhost
 ::1         localhost
 127.0.1.1   xoniarch.localdomain xoniarch
 HOSTS
-
-# Usuario y sudo
 useradd -m -G wheel -s /bin/bash xoniarch
 echo "xoniarch:xoniarch" | chpasswd
 echo "root:root" | chpasswd
 sed -i 's/^# %wheel ALL=(ALL:ALL) ALL/%wheel ALL=(ALL:ALL) ALL/' /etc/sudoers
-
-# Habilitar servicios
 systemctl enable NetworkManager
-
-# GRUB
-grub-install --target=i386-pc /dev/$(lsblk -no pkname /dev/ROOT_PART_PLACEHOLDER)
+grub-install --target=i386-pc /dev/__DISK__
 grub-mkconfig -o /boot/grub/grub.cfg
-EOF
-
-# Reemplazar marcador por el disco real
-sed -i "s|ROOT_PART_PLACEHOLDER|$ROOT_PART|g" /mnt/root/chroot-config.sh
-
+INNER
+sed -i "s|__DISK__|$DISK|g" /mnt/root/chroot-config.sh
 chmod +x /mnt/root/chroot-config.sh
 arch-chroot /mnt /root/chroot-config.sh
 
-# ============================================
-# DESCARGAR Y EJECUTAR SCRIPT DE PERSONALIZACIÓN XONIARCH
-# ============================================
-info "Descargando script de personalización Xoniarch32..."
+# Descargar y ejecutar personalización Xoniarch
+info "Descargando personalización Xoniarch..."
 curl -sSL https://raw.githubusercontent.com/XONIDU/xoniarch32/main/xoniarch-install.sh -o /mnt/root/xoniarch-install.sh
 chmod +x /mnt/root/xoniarch-install.sh
-
-info "Ejecutando personalización dentro del chroot..."
 arch-chroot /mnt /root/xoniarch-install.sh
 
-# ============================================
-# LIMPIEZA FINAL
-# ============================================
+# Limpiar
 rm -f /mnt/root/chroot-config.sh /mnt/root/xoniarch-install.sh
 
-# ============================================
-# DESMONTAR Y FINALIZAR
-# ============================================
-info "Desmontando particiones..."
+# Desmontar
+info "Desmontando..."
 umount -R /mnt
-if [ -n "$SWAP_PART" ]; then
-    swapoff "/dev/$SWAP_PART" 2>/dev/null || true
-fi
+[ -n "$SWAP_PART" ] && swapoff "/dev/$SWAP_PART" 2>/dev/null || true
 
 echo -e "${GREEN}========================================${NC}"
 echo -e "${GREEN}   INSTALACIÓN COMPLETADA               ${NC}"
 echo -e "${GREEN}========================================${NC}"
-echo ""
-echo "Puedes reiniciar ahora:"
-echo "  sudo reboot"
-echo ""
+echo "Reinicia con: sudo reboot"
 echo "Usuario: xoniarch | Contraseña: xoniarch"
 echo "Root: root | Contraseña: root"
-echo ""
-echo "Después del reinicio, ejecuta 'xoniarch-help' para más información."
