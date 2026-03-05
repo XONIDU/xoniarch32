@@ -1,0 +1,8 @@
+#Somos Xonidu
+
+Procesador: 32 bits (Intel Pentium III / Celeron)
+RAM: 512 MB (1 GB recomendado)
+Almacenamiento: 8 GB
+Base: Arch Linux 32 bits
+
+#Creador: Darian Alberto Camacho Salas
