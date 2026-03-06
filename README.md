@@ -1,131 +1,104 @@
-## 🏔️ **XONIARCH32** v4.2.0
+# XONIARCH32 v5.1
 ### by Darian Alberto Camacho Salas
 
 ---
 
-## 📋 **Descripción**
+## 📋 Descripción
 
-**XONIARCH32** es una distribución Linux ligera basada en **Arch Linux 32 bits**, diseñada específicamente para hardware antiguo y de bajos recursos. El sistema incluye un instalador completo que automatiza todo el proceso desde el live USB hasta un sistema funcional con entorno gráfico y herramientas XONI.
-
----
-
-## ✨ **Características principales**
-
-- **Instalador todo-en-uno** – Un solo script que particiona, instala y configura todo.
-- **Gráfico siempre activo** – Inicia directamente en entorno gráfico (sin `startx` manual).
-- **Terminal fija** – La terminal principal no se puede cerrar.
-- **Soporte completo de hardware** – Audio, video, red, WiFi, Bluetooth (controladores incluidos).
-- **Herramientas XONI integradas** – Instalación modular mediante `installxoni`.
-- **Actualización desde GitHub** – Mantén tu sistema actualizado con `xoniarch-update`.
+XONIARCH32 es una distribución Linux ligera basada en **Arch Linux 32 bits**, diseñada para hardware antiguo y de bajos recursos. El sistema incluye un instalador interactivo que configura todo automáticamente: detección de hardware, controladores, entorno gráfico con terminal fija y herramientas XONI.
 
 ---
 
-## ⚠️ **Advertencia**
+## ✨ Características
 
-Este sistema es para **fines educativos y personales**. El autor no se responsabiliza del uso que se le dé. Úsalo con responsabilidad.
+- **Instalador interactivo** – Pregunta ubicación, teclado, idioma, usuario y contraseña
+- **Detección automática de hardware** – CPU, GPU, audio, WiFi (instala controladores según el equipo)
+- **GRÁFICO SIEMPRE ACTIVO** – Arranca directamente en entorno gráfico (sin `startx`)
+- **Terminal fija** – La terminal principal no se puede cerrar
+- **Múltiples gestores de display** – LightDM, SDDM, LXDM, SLiM (si uno falla, otro intenta)
+- **Scripts XONI** – `installxoni`, `xoniarch-update`, `xoniarch-menu`, `xoniarch-help`
+- **Actualización desde GitHub** – `xoniarch-update` mantiene las herramientas al día
 
 ---
 
-## 📥 **Instalación desde live USB**
+## 📥 Instalación desde live USB
 
-### 🔧 **Requisitos previos**
-- Live USB de **Arch Linux 32 bits** (descargar desde [archlinux32.org](https://archlinux32.org))
+### Requisitos previos
+- Live USB de **Arch Linux 32 bits** ([descargar](https://archlinux32.org))
 - Conexión a internet (cable o WiFi)
 - Al menos 8 GB libres en el disco de destino
 
-### 🚀 **Pasos de instalación**
+### Pasos
 
-#### **1. Arranca desde el live USB de Arch Linux 32 bits**
+1. **Arranca desde el live USB**
 
-#### **2. Conéctate a internet**
+2. **Conéctate a internet** (por cable o WiFi con `iwctl`)
 
-**Por WiFi (usando `iwctl`):**
-```bash
-iwctl
-device list
-station wlan0 scan
-station wlan0 get-networks
-station wlan0 connect "NombreDeTuRed"
-exit
-```
+3. **Descarga el instalador**
+   ```bash
+   curl -O https://raw.githubusercontent.com/XONIDU/xoniarch32/main/install-xoniarch.sh
+   ```
 
-**Por cable Ethernet:** conecta y listo.
+4. **Ejecuta el instalador**
+   ```bash
+   bash install-xoniarch.sh
+   ```
 
-#### **3. Descarga el instalador**
+5. **Sigue las instrucciones** (ubicación, idioma, teclado, usuario, disco, swap)
 
-```bash
-curl -O https://raw.githubusercontent.com/XONIDU/xoniarch32/main/install-xoniarch.sh
-```
-
-#### **4. Ejecuta el instalador**
-
-```bash
-bash install-xoniarch.sh
-```
-
-El script te guiará por:
-- Selección del disco de instalación
-- Particionado (automático con o sin swap, o manual)
-- Instalación del sistema base
-- Configuración del sistema (locale, hostname, usuario, GRUB)
-- Personalización Xoniarch32 (entorno gráfico, scripts, herramientas)
-
-#### **5. Al finalizar, reinicia**
-
-```bash
-sudo reboot
-```
+6. **Reinicia al finalizar**
+   ```bash
+   sudo reboot
+   ```
 
 ---
 
-## 🎯 **Primer inicio**
+## 🎯 Primer inicio
 
-- **Usuario:** `xoniarch`
-- **Contraseña:** `xoniarch`
-- **Root:** `root` / `root`
+- **Usuario**: el que elegiste durante la instalación
+- **Contraseña**: la que configuraste
+- **Root**: `root` (misma contraseña)
 
-El sistema arrancará directamente en modo gráfico con una **terminal fija** que no se puede cerrar. Usa el menú contextual (clic derecho) o las teclas rápidas para acceder a las funciones.
+El sistema arrancará **directamente en modo gráfico** con una **terminal fija** que no se puede cerrar. Usa el menú contextual (clic derecho) o las teclas rápidas.
 
 ---
 
-## 📦 **Comandos principales**
+## 📦 Comandos principales
 
 | Comando | Descripción |
 |---------|-------------|
 | `installxoni <herramienta>` | Instalar herramienta XONI desde GitHub |
-| `xoniarch-update` | Actualizar sistema y herramientas |
+| `xoniarch-update` | Actualizar todas las herramientas |
+| `xoniarch-menu` | Menú interactivo |
 | `xoniarch-help` | Mostrar ayuda completa |
-| `xoniarch-menu` | Abrir menú interactivo |
 | `nmtui` | Configurar red WiFi/Ethernet |
 | `htop` | Monitor del sistema |
-| `pcmanfm` | Gestor de archivos |
-| `alsamixer` | Ajustar volumen |
 
 ---
 
-## ⌨️ **Atajos de teclado**
+## ⌨️ Atajos de teclado
 
 | Tecla | Acción |
 |-------|--------|
-| `Windows + x` | Abrir menú principal |
-| `Windows + t` | Abrir nueva terminal |
-| `Windows + h` | Mostrar ayuda |
-| `Windows + i` | Instalar herramienta |
-| `Windows + q` | Cerrar sesión |
+| `Win + x` | Abrir menú principal |
+| `Win + t` | Abrir nueva terminal |
+| `Win + h` | Mostrar ayuda |
+| `Win + i` | Instalar herramienta XONI |
+| `Win + q` | Cerrar sesión |
 
 ---
 
-## 🛠️ **Herramientas XONI disponibles**
+## 🛠️ Herramientas XONI disponibles
 
 ```bash
-installxoni xonitube    # Reproductor de videos YouTube
+installxoni xonitube    # Reproductor de YouTube
 installxoni xonigraf    # Graficador matemático
 installxoni xonichat    # Chat con IA Gemini
 installxoni xonimail    # Cliente de correo
 installxoni xoniencript # Cifrado de archivos
 installxoni xoniweb     # Análisis de malware web
 installxoni xonidip     # Generador de diplomas
-installxoni xonidate    # Generador de citas aleatorias
+installxoni xonidate    # Generador de citas
 installxoni xoniconver  # Conversor de formatos
 installxoni xoniter     # Acceso rápido a comandos
 installxoni xonial      # Monitoreo de servicio social
@@ -134,23 +107,21 @@ installxoni xonispam    # Pruebas éticas de spam
 
 ---
 
-## 🔧 **Solución de problemas comunes**
+## 🔧 Solución de problemas comunes
 
-### ❌ **Error de firmas PGP al instalar**
+### ❌ Error de firmas PGP
 ```bash
 pacman-key --init
 pacman-key --populate archlinux32
 pacman-key --refresh-keys
-pacman -Sy
 ```
 
-### ❌ **No aparece el disco en el instalador**
+### ❌ No aparece el disco
 ```bash
 lsblk  # Verifica que el disco sea visible
-# Si usas máquina virtual, asegura que el controlador SATA esté activado
 ```
 
-### ❌ **WiFi no funciona**
+### ❌ WiFi no funciona
 ```bash
 rfkill unblock wifi
 systemctl restart iwd
@@ -160,34 +131,43 @@ station wlan0 scan
 station wlan0 connect "SSID"
 ```
 
-### ❌ **La terminal fija se cerró accidentalmente**
-Reinicia el servidor gráfico:
+### ❌ La terminal fija se cerró accidentalmente
 ```bash
-sudo systemctl restart sddm
+sudo systemctl restart lightdm   # o sddm, lxdm, slim
 ```
 
 ---
 
-## 📥 **Descargar Arch Linux 32 bits**
+## 💻 Hardware soportado
 
-### 🌐 **Mirrors oficiales**
+### Mínimo
+- **Procesador**: Intel Pentium III / Celeron (32 bits)
+- **RAM**: 512 MB
+- **Almacenamiento**: 8 GB
+- **Gráficos**: VESA compatible
 
-| Región | Mirror |
-|--------|--------|
-| Alemania | [de.mirror.archlinux32.org](http://de.mirror.archlinux32.org) |
-| Alemania | [mirror.archlinux32.org](http://mirror.archlinux32.org) |
-| Estados Unidos | [mirror.clarkson.edu](http://mirror.clarkson.edu) |
-| Estados Unidos | [mirror.math.princeton.edu](http://mirror.math.princeton.edu) |
-| Francia | [archlinux32.agoctrl.org](http://archlinux32.agoctrl.org) |
-| Rusia | [mirror.yandex.ru](http://mirror.yandex.ru) |
-
-### 📦 **ISO recomendada**
-- **Última versión estable:** [https://mirror.archlinux32.org/iso/latest/](https://mirror.archlinux32.org/iso/latest/)
-- **Tamaño:** ~800 MB
+### Probado en
+- ASUS Eee PC 900 (Intel Celeron M 900MHz, 1GB RAM, GMA 900)
+- ThinkPad X60 (Intel Core Duo, 32 bits)
+- VirtualBox / QEMU
 
 ---
 
-## 🔄 **Actualización del sistema**
+## 📥 Descargar Arch Linux 32 bits
+
+| Región | Mirror |
+|--------|--------|
+| Alemania | `https://mirror.archlinux32.org` |
+| Alemania | `https://ftp.halifax.rwth-aachen.de/archlinux32` |
+| Estados Unidos | `https://mirror.clarkson.edu/archlinux32` |
+| Francia | `https://archlinux32.agoctrl.org` |
+| Rusia | `https://mirror.yandex.ru/archlinux32` |
+
+**ISO recomendada**: [https://mirror.archlinux32.org/iso/latest/](https://mirror.archlinux32.org/iso/latest/) (~800 MB)
+
+---
+
+## 🔄 Actualización del sistema
 
 ```bash
 # Actualizar herramientas XONI
@@ -199,50 +179,33 @@ sudo pacman -Syu
 
 ---
 
-## 💻 **Hardware soportado**
-
-### **Mínimo**
-- Procesador: Intel Pentium III / Celeron (32 bits)
-- RAM: 512 MB
-- Almacenamiento: 8 GB
-- Gráficos: VESA compatible
-
-### **Probado en**
-- ASUS Eee PC 900 (Intel Celeron M 900MHz, 1GB RAM, GMA 900)
-- ThinkPad X60 (Intel Core Duo, 32 bits)
-- VirtualBox / QEMU
-
----
-
-## 🧠 **Estructura del repositorio**
+## 📁 Estructura del repositorio
 
 ```
 xoniarch32/
-├── install-xoniarch.sh    # Instalador principal (ejecutar desde live)
-├── xoniarch-install.sh    # Script de personalización (ejecutado internamente)
+├── install-xoniarch.sh    # Instalador principal
 ├── README.md              # Este archivo
-├── requisitos.txt         # Dependencias detalladas
-└── .gitignore             # Archivos ignorados
+└── requisitos.txt         # Dependencias detalladas
 ```
 
 ---
 
-## ✉️ **Contacto y créditos**
+## ✉️ Contacto y créditos
 
-- **Autor:** Darian Alberto Camacho Salas
-- **Email:** xonidu@gmail.com
-- **Web:** [https://xonipage.xonidu.com/](https://xonipage.xonidu.com/)
-- **GitHub:** [@XONIDU](https://github.com/XONIDU)
-- **#Somos XONINDU**
+- **Autor**: Darian Alberto Camacho Salas
+- **Email**: xonidu@gmail.com
+- **Web**: [https://xonipage.xonidu.com/](https://xonipage.xonidu.com/)
+- **GitHub**: [@XONIDU](https://github.com/XONIDU)
 
 ---
 
-## 🌐 **Enlaces útiles**
+## 🌐 Enlaces útiles
 
 - [Repositorio XONIARCH32](https://github.com/XONIDU/xoniarch32)
 - [Arch Linux 32 Official](https://archlinux32.org/)
 - [Guía de instalación de Arch](https://wiki.archlinux.org/title/Installation_guide)
-- [XONIPAGE](https://xonipage.xonidu.com/)
-- [XONIENCRIPT](https://xoniencript.xonidu.com/)
-- [XONITRES](https://xonitres.xonidu.com/)
+
+---
+
+⭐ **Si te gusta el proyecto, no olvides dejar una estrella en GitHub** ⭐
 
