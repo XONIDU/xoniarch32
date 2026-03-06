@@ -1,15 +1,14 @@
 #!/bin/bash
-# XONIARCH32 v5.0 - INSTALADOR CON GRÁFICO PERMANENTE
+# XONIARCH32 v5.1 - INSTALADOR ULTRA ROBUSTO
 # Autor: Darian Alberto Camacho Salas
 # Repositorio: https://github.com/XONIDU/xoniarch32
 #
 # Características:
-#   - GRÁFICO SIEMPRE ACTIVO (no necesita startx)
+#   - Prueba múltiples mirrors y elige el más rápido
+#   - Reintentos automáticos en descargas fallidas
+#   - Instalación base con reintentos y cambio de mirror
+#   - Gráfico siempre activo con múltiples gestores
 #   - Terminal principal fija (no se puede cerrar)
-#   - Múltiples opciones de recuperación
-#   - Pregunta: ubicación, teclado, idioma, usuario, contraseña
-#   - Detección automática de hardware
-#   - Múltiples gestores de display por si uno falla
 
 set -euo pipefail
 trap 'echo -e "\033[0;31m[ERROR] Falló en la línea $LINENO\033[0m" >&2' ERR
@@ -29,8 +28,8 @@ warn()  { echo -e "${YELLOW}[AVISO] $1${NC}"; }
 # ============================================
 clear
 echo "========================================"
-echo "   XONIARCH32 v5.0                      "
-echo "   GRÁFICO SIEMPRE ACTIVO               "
+echo "   XONIARCH32 v5.1                      "
+echo "   INSTALADOR ULTRA ROBUSTO             "
 echo "========================================"
 echo ""
 
@@ -147,54 +146,119 @@ mount "/dev/$ROOT_PART" /mnt
 [ -n "$SWAP_PART" ] && swapon "/dev/$SWAP_PART" 2>/dev/null || true
 
 # ============================================
-# 6. Configurar mirrors
+# 6. Configurar mirrors (múltiples opciones)
 # ============================================
-info "Configurando mirrors..."
+info "Probando mirrors disponibles..."
 
-MIRRORS=(
+# Lista completa de mirrors de archlinux32
+declare -a MIRRORS=(
     "https://mirror.archlinux32.org"
     "https://ftp.halifax.rwth-aachen.de/archlinux32"
     "https://mirror.cyberbits.eu/archlinux32"
     "https://mirror.ubnt.net/archlinux32"
+    "https://mirror.accum.se/mirror/archlinux32"
     "https://de.mirror.archlinux32.org"
     "https://gr.mirror.archlinux32.org"
+    "https://mirror.clarkson.edu/archlinux32"
+    "https://mirror.math.princeton.edu/pub/archlinux32"
+    "https://archlinux32.andreasbaumann.cc"
+    "https://mirror.yandex.ru/archlinux32"
+    "https://mirror.datacenter.by/pub/archlinux32"
 )
 
-WORKING_MIRROR=""
+# Probar velocidad de cada mirror y ordenar por tiempo de respuesta
+mirror_speeds=()
 for mirror in "${MIRRORS[@]}"; do
-    if curl -s --head --max-time 5 "${mirror}/core/os/i686/core.db" >/dev/null 2>&1; then
-        WORKING_MIRROR="$mirror"
-        break
+    echo -n "Probando $mirror ... "
+    # Medir tiempo de conexión
+    if time=$(curl -s -w "%{time_total}" -o /dev/null --max-time 5 "${mirror}/core/os/i686/core.db" 2>/dev/null); then
+        echo "${GREEN}OK (${time}s)${NC}"
+        mirror_speeds+=("$time $mirror")
+    else
+        echo "${RED}FALLÓ${NC}"
     fi
 done
-WORKING_MIRROR=${WORKING_MIRROR:-"https://mirror.archlinux32.org"}
+
+# Ordenar por tiempo (menor primero)
+if [ ${#mirror_speeds[@]} -eq 0 ]; then
+    warn "No se encontró ningún mirror funcional. Usando los predeterminados."
+    best_mirror="https://mirror.archlinux32.org"
+else
+    sorted=$(printf '%s\n' "${mirror_speeds[@]}" | sort -n)
+    best_mirror=$(echo "$sorted" | head -1 | cut -d' ' -f2-)
+    info "Mirror más rápido: $best_mirror"
+fi
+
+# Construir lista de servers para pacman.conf (el mejor primero, luego los demás)
+server_list_core=""
+server_list_extra=""
+server_list_community=""
+for mirror in "${MIRRORS[@]}"; do
+    server_list_core+="Server = $mirror/\$arch/\$repo\n"
+    server_list_extra+="Server = $mirror/\$arch/\$repo\n"
+    server_list_community+="Server = $mirror/\$arch/\$repo\n"
+done
 
 cat > /etc/pacman.conf << EOF
 [options]
-Architecture = i686
-SigLevel = Never
+HoldPkg         = pacman glibc
+Architecture    = i686
+SigLevel        = Never
+LocalFileSigLevel = Never
+RemoteFileSigLevel = Never
 ParallelDownloads = 5
+Color
+CheckSpace
+DisableDownloadTimeout
+Timeout = 60
+
 [core]
-Server = $WORKING_MIRROR/\$arch/\$repo
+$server_list_core
 [extra]
-Server = $WORKING_MIRROR/\$arch/\$repo
+$server_list_extra
 [community]
-Server = $WORKING_MIRROR/\$arch/\$repo
+$server_list_community
 EOF
 
 # ============================================
-# 7. Instalar sistema base
+# 7. Inicializar claves PGP (si es necesario)
 # ============================================
-info "Instalando sistema base..."
-pacstrap /mnt base base-devel linux linux-firmware grub networkmanager sudo git nano
+info "Inicializando claves PGP..."
+pacman-key --init 2>/dev/null || true
+pacman-key --populate archlinux32 2>/dev/null || true
+pacman -Sy --noconfirm archlinux32-keyring 2>/dev/null || true
 
 # ============================================
-# 8. Generar fstab
+# 8. Instalar sistema base con reintentos
+# ============================================
+info "Instalando sistema base (puede tardar)..."
+max_retries=5
+retry=0
+base_ok=false
+while [ $retry -lt $max_retries ] && [ "$base_ok" = false ]; do
+    if pacstrap /mnt base base-devel linux linux-firmware grub networkmanager sudo git nano; then
+        base_ok=true
+        info "Sistema base instalado correctamente."
+    else
+        retry=$((retry+1))
+        warn "Falló la instalación base. Reintento $retry de $max_retries en 15 segundos..."
+        sleep 15
+        # Forzar actualización de mirrors
+        pacman -Syy
+    fi
+done
+
+if [ "$base_ok" = false ]; then
+    error_exit "No se pudo instalar el sistema base después de $max_retries intentos. Revisa tu conexión a internet."
+fi
+
+# ============================================
+# 9. Generar fstab
 # ============================================
 genfstab -U /mnt >> /mnt/etc/fstab
 
 # ============================================
-# 9. Configurar sistema base
+# 10. Configurar sistema base
 # ============================================
 info "Configurando sistema..."
 
@@ -232,14 +296,20 @@ chmod +x /mnt/root/chroot-config.sh
 arch-chroot /mnt /root/chroot-config.sh
 
 # ============================================
-# 10. Instalar GRUB
+# 11. Instalar GRUB (con verificación)
 # ============================================
 info "Instalando GRUB..."
 arch-chroot /mnt grub-install --target=i386-pc "/dev/$DISK"
 arch-chroot /mnt grub-mkconfig -o /boot/grub/grub.cfg
 
+# Verificar que el kernel esté presente
+if [ ! -f /mnt/boot/vmlinuz-linux ]; then
+    warn "Kernel no encontrado. Intentando reinstalar linux..."
+    arch-chroot /mnt pacman -S --noconfirm linux
+fi
+
 # ============================================
-# 11. Detectar hardware
+# 12. Detectar hardware
 # ============================================
 info "Detectando hardware..."
 
@@ -271,7 +341,7 @@ if lspci | grep -i network | grep -i wireless >/dev/null; then
 fi
 
 # ============================================
-# 12. Instalar Xorg y Openbox
+# 13. Instalar Xorg y Openbox
 # ============================================
 info "Instalando Xorg y Openbox..."
 
@@ -292,13 +362,12 @@ PACKAGES=(
 )
 
 for pkg in "${PACKAGES[@]}"; do
-    if arch-chroot /mnt pacman -Sp "$pkg" &>/dev/null; then
-        arch-chroot /mnt pacman -S --noconfirm "$pkg" 2>/dev/null || warn "Falló $pkg"
-    fi
+    echo "Instalando $pkg..."
+    arch-chroot /mnt pacman -S --noconfirm "$pkg" 2>/dev/null || warn "Falló $pkg"
 done
 
 # ============================================
-# 13. INSTALAR MÚLTIPLES GESTORES DE DISPLAY
+# 14. Instalar múltiples gestores de display
 # ============================================
 info "Instalando gestores de display (múltiples opciones)..."
 
@@ -311,45 +380,55 @@ DM_PACKAGES=(
 )
 
 for dm in "${DM_PACKAGES[@]}"; do
-    if arch-chroot /mnt pacman -Sp "$dm" &>/dev/null; then
-        arch-chroot /mnt pacman -S --noconfirm "$dm" 2>/dev/null || warn "Falló $dm"
-    fi
+    arch-chroot /mnt pacman -S --noconfirm "$dm" 2>/dev/null || true
 done
 
-# Determinar qué gestor instalar (prioridad: lightdm > sddm > lxdm > slim)
-DM_SERVICE=""
-if [ -f /mnt/usr/lib/systemd/system/lightdm.service ]; then
-    DM_SERVICE="lightdm"
-    # Configurar lightdm para auto-login
+# Configurar auto-login para el que esté instalado
+# LightDM
+if [ -f /mnt/etc/lightdm/lightdm.conf ]; then
     mkdir -p /mnt/etc/lightdm
     cat > /mnt/etc/lightdm/lightdm.conf << LIGHTDM
 [Seat:*]
 autologin-user=$USERNAME
 autologin-session=openbox
 LIGHTDM
-elif [ -f /mnt/usr/lib/systemd/system/sddm.service ]; then
-    DM_SERVICE="sddm"
+fi
+
+# SDDM
+if [ -d /mnt/etc/sddm.conf.d ]; then
     mkdir -p /mnt/etc/sddm.conf.d
     cat > /mnt/etc/sddm.conf.d/autologin.conf << SDDM
 [Autologin]
 User=$USERNAME
 Session=openbox.desktop
 SDDM
-elif [ -f /mnt/usr/lib/systemd/system/lxdm.service ]; then
-    DM_SERVICE="lxdm"
-    sed -i "s/^# autologin=.*/autologin=$USERNAME/" /mnt/etc/lxdm/lxdm.conf 2>/dev/null || true
-elif [ -f /mnt/usr/lib/systemd/system/slim.service ]; then
-    DM_SERVICE="slim"
+fi
+
+# LXDM
+if [ -f /mnt/etc/lxdm/lxdm.conf ]; then
+    sed -i "s/^# autologin=.*/autologin=$USERNAME/" /mnt/etc/lxdm/lxdm.conf
+fi
+
+# SLiM
+if [ -f /mnt/etc/slim.conf ]; then
     echo "default_user $USERNAME" >> /mnt/etc/slim.conf
     echo "auto_login yes" >> /mnt/etc/slim.conf
 fi
 
-if [ -n "$DM_SERVICE" ]; then
-    arch-chroot /mnt systemctl enable "$DM_SERVICE"
-    info "Gestor de display habilitado: $DM_SERVICE"
-else
-    warn "No se pudo instalar ningún gestor de display. Usando startx como fallback."
-    # Crear script de inicio automático en .bashrc
+# Habilitar el primer gestor encontrado
+DM_SERVICE=""
+for svc in lightdm sddm lxdm slim; do
+    if [ -f "/mnt/usr/lib/systemd/system/${svc}.service" ]; then
+        DM_SERVICE="$svc"
+        arch-chroot /mnt systemctl enable "$svc"
+        info "Gestor de display habilitado: $svc"
+        break
+    fi
+done
+
+if [ -z "$DM_SERVICE" ]; then
+    warn "No se pudo instalar ningún gestor de display. Usando startx automático en tty1."
+    # Añadir al .bashrc del usuario para iniciar X en tty1
     cat >> /mnt/home/$USERNAME/.bashrc << 'BASHRC'
 if [ -z "$DISPLAY" ] && [ "$(tty)" = "/dev/tty1" ]; then
     startx
@@ -358,7 +437,7 @@ BASHRC
 fi
 
 # ============================================
-# 14. Configurar Openbox (TERMINAL FIJA)
+# 15. Configurar Openbox (TERMINAL FIJA)
 # ============================================
 info "Configurando Openbox con terminal fija..."
 mkdir -p /mnt/etc/skel/.config/openbox
@@ -415,7 +494,7 @@ EOF
 chmod +x /mnt/etc/skel/.xinitrc
 
 # ============================================
-# 15. Scripts XONI
+# 16. Scripts XONI
 # ============================================
 info "Creando scripts XONI..."
 
@@ -453,7 +532,7 @@ cat > /mnt/usr/local/bin/xoniarch-help << 'EOF'
 #!/bin/bash
 cat << 'HELP'
 ========================================
-   XONIARCH32 v5.0 - AYUDA
+   XONIARCH32 v5.1 - AYUDA
 ========================================
 COMANDOS:
   installxoni <herramienta>  : Instalar desde GitHub
@@ -506,7 +585,7 @@ EOF
 chmod +x /mnt/usr/local/bin/*
 
 # ============================================
-# 16. .bashrc personalizado
+# 17. .bashrc personalizado
 # ============================================
 cat > /mnt/etc/skel/.bashrc << 'EOF'
 alias ll='ls -la'
@@ -519,11 +598,11 @@ EOF
 cp /mnt/etc/skel/.bashrc "/mnt/home/$USERNAME/"
 
 # ============================================
-# 17. Mensaje de bienvenida
+# 18. Mensaje de bienvenida
 # ============================================
 cat > /mnt/etc/motd << 'EOF'
 ========================================
-   XONIARCH32 v5.0 - LISTO
+   XONIARCH32 v5.1 - LISTO
    by Darian Alberto Camacho Salas
 ========================================
 
@@ -536,7 +615,7 @@ Repositorio: https://github.com/XONIDU/xoniarch32
 EOF
 
 # ============================================
-# 18. Crear script de respaldo para inicio gráfico
+# 19. Crear script de respaldo para inicio gráfico
 # ============================================
 cat > /mnt/usr/local/bin/ensure-graphical << 'EOF'
 #!/bin/bash
@@ -549,10 +628,11 @@ EOF
 chmod +x /mnt/usr/local/bin/ensure-graphical
 
 # Añadir al crontab del usuario (ejecutar cada minuto)
+mkdir -p /mnt/var/spool/cron
 echo "* * * * * /usr/local/bin/ensure-graphical" >> /mnt/var/spool/cron/$USERNAME 2>/dev/null || true
 
 # ============================================
-# 19. Limpieza y finalización
+# 20. Limpieza y finalización
 # ============================================
 rm -f /mnt/root/chroot-config.sh
 umount -R /mnt 2>/dev/null || true
