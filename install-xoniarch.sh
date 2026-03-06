@@ -1,35 +1,34 @@
 #!/bin/bash
-# XONIARCH32 - INSTALADOR COMPLETO (PIDE DISCO PRIMERO)
+# XONIARCH32 - INSTALADOR ROBUSTO DESDE LIVE USB
 # Autor: Darian Alberto Camacho Salas
+# Versión: 4.2.0
+# Repositorio: https://github.com/XONIDU/xoniarch32
 
-set -e
+set -euo pipefail
+trap 'echo -e "\033[0;31m[ERROR] Falló el script en la línea $LINENO\033[0m" >&2' ERR
 
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 RED='\033[0;31m'
 NC='\033[0m'
 
-error_exit() {
-    echo -e "${RED}[ERROR] $1${NC}" >&2
-    exit 1
-}
-
-info() { echo -e "${GREEN}[INFO] $1${NC}"; }
-warn() { echo -e "${YELLOW}[AVISO] $1${NC}"; }
+error_exit() { echo -e "${RED}[ERROR] $1${NC}" >&2; exit 1; }
+info()  { echo -e "${GREEN}[INFO] $1${NC}"; }
+warn()  { echo -e "${YELLOW}[AVISO] $1${NC}"; }
 
 # ============================================
-# VERIFICAR QUE SE EJECUTA EN LIVE USB
+# 1. VERIFICAR ENTORNO LIVE
 # ============================================
 if [ ! -d /run/archiso ]; then
     error_exit "Este script debe ejecutarse desde el live USB de Arch Linux 32 bits."
 fi
 
 # ============================================
-# LO PRIMERO: MOSTRAR DISCOS Y SELECCIONAR
+# 2. SELECCIONAR DISCO DE INSTALACIÓN
 # ============================================
 clear
 echo -e "${GREEN}========================================${NC}"
-echo -e "${GREEN}   XONIARCH32 - INSTALADOR COMPLETO    ${NC}"
+echo -e "${GREEN}   XONIARCH32 - INSTALADOR ROBUSTO     ${NC}"
 echo -e "${GREEN}========================================${NC}"
 echo ""
 echo -e "${YELLOW}Discos disponibles:${NC}"
@@ -38,16 +37,9 @@ lsblk -d -o NAME,SIZE,MODEL,TYPE | grep -E "disk|NAME"
 echo "----------------------------------------"
 echo ""
 
-# Preguntar por el disco
 read -p "¿En qué disco quieres instalar Xoniarch32? (ej: sda): " DISK
 if [ -z "$DISK" ]; then
-    echo ""
-    echo -e "${RED}No se seleccionó ningún disco. Intenta de nuevo.${NC}"
-    echo ""
-    read -p "¿En qué disco quieres instalar? (ej: sda): " DISK
-    if [ -z "$DISK" ]; then
-        error_exit "No se seleccionó ningún disco. Abortando."
-    fi
+    error_exit "No se seleccionó ningún disco."
 fi
 
 if [ ! -b "/dev/$DISK" ]; then
@@ -65,73 +57,7 @@ if [ "$CONFIRM" != "YES" ]; then
 fi
 
 # ============================================
-# AHORA SÍ, BUSCAR MIRROR FUNCIONAL
-# ============================================
-info "Buscando mirror funcional de archlinux32..."
-MIRRORS=(
-    "https://mirror.archlinux32.org"
-    "https://ftp.halifax.rwth-aachen.de/archlinux32"
-    "https://mirror.cyberbits.eu/archlinux32"
-    "https://mirror.ubnt.net/archlinux32"
-    "https://mirror.accum.se/mirror/archlinux32"
-    "https://de.mirror.archlinux32.org"
-    "https://gr.mirror.archlinux32.org"
-    "https://mirror.clarkson.edu/archlinux32"
-    "https://mirror.math.princeton.edu/pub/archlinux32"
-)
-
-WORKING_MIRROR=""
-for mirror in "${MIRRORS[@]}"; do
-    echo -n "Probando $mirror... "
-    if curl -s --head --max-time 5 "${mirror}/core/os/i686/core.db" > /dev/null 2>&1; then
-        echo -e "${GREEN}OK${NC}"
-        WORKING_MIRROR="$mirror"
-        break
-    else
-        echo -e "${RED}FALLÓ${NC}"
-    fi
-done
-
-if [ -z "$WORKING_MIRROR" ]; then
-    error_exit "No se encontró ningún mirror funcional. Verifica tu conexión a internet."
-fi
-
-info "Mirror seleccionado: $WORKING_MIRROR"
-
-# ============================================
-# CONFIGURAR PACMAN
-# ============================================
-cat > /etc/pacman.conf << EOF
-[options]
-HoldPkg         = pacman glibc
-Architecture    = i686
-SigLevel        = Never
-LocalFileSigLevel = Never
-RemoteFileSigLevel = Never
-ParallelDownloads = 5
-Color
-CheckSpace
-
-[core]
-Server = $WORKING_MIRROR/\$arch/\$repo
-
-[extra]
-Server = $WORKING_MIRROR/\$arch/\$repo
-
-[community]
-Server = $WORKING_MIRROR/\$arch/\$repo
-EOF
-
-# ============================================
-# INICIALIZAR CLAVES PGP
-# ============================================
-info "Inicializando claves PGP..."
-pacman-key --init 2>/dev/null || true
-pacman-key --populate archlinux32 2>/dev/null || true
-pacman -Sy --noconfirm archlinux32-keyring 2>/dev/null || true
-
-# ============================================
-# OPCIÓN DE PARTICIONADO
+# 3. OPCIONES DE PARTICIONADO
 # ============================================
 echo ""
 echo "Elige el tipo de particionado:"
@@ -140,11 +66,10 @@ echo "2) Manual (usar fdisk tú mismo)"
 read -p "Opción [1/2]: " PART_OPT
 
 if [ "$PART_OPT" = "1" ]; then
-    # Particionado automático
     read -p "¿Crear partición swap? (s/n): " SWAP_OPT
     if [[ "$SWAP_OPT" =~ ^[Ss]$ ]]; then
         read -p "Tamaño de swap en GB (ej: 1): " SWAP_SIZE
-        if [ -z "$SWAP_SIZE" ]; then SWAP_SIZE=1; fi
+        [ -z "$SWAP_SIZE" ] && SWAP_SIZE=1
         info "Particionando /dev/$DISK con swap de ${SWAP_SIZE}G..."
         parted "/dev/$DISK" mklabel msdos
         parted "/dev/$DISK" mkpart primary linux-swap 1MiB "${SWAP_SIZE}GiB"
@@ -164,49 +89,120 @@ if [ "$PART_OPT" = "1" ]; then
     # Formatear
     info "Formateando particiones..."
     mkfs.ext4 -F "/dev/$ROOT_PART"
-    if [ -n "$SWAP_PART" ]; then
-        mkswap "/dev/$SWAP_PART"
-    fi
+    [ -n "$SWAP_PART" ] && mkswap "/dev/$SWAP_PART"
 else
-    # Particionado manual
     info "Abriendo fdisk para particionado manual. Cuando termines, escribe 'exit' para continuar."
     fdisk "/dev/$DISK"
     echo ""
     lsblk "/dev/$DISK"
     read -p "Indica la partición raíz (ej: ${DISK}2): " ROOT_PART
-    if [ -z "$ROOT_PART" ]; then error_exit "No se indicó partición raíz."; fi
+    [ -z "$ROOT_PART" ] && error_exit "No se indicó partición raíz."
     read -p "Indica la partición swap (dejar vacío si no hay): " SWAP_PART
 fi
 
-# ============================================
-# MONTAR SISTEMA
-# ============================================
+# Montar sistema
 info "Montando sistema en /mnt..."
 mount "/dev/$ROOT_PART" /mnt
-if [ -n "$SWAP_PART" ]; then
-    swapon "/dev/$SWAP_PART" 2>/dev/null || true
+[ -n "$SWAP_PART" ] && swapon "/dev/$SWAP_PART" 2>/dev/null || true
+
+# ============================================
+# 4. CONFIGURAR PACMAN CON MIRRORS DE ARCHLINUX32
+# ============================================
+info "Configurando mirrors de archlinux32..."
+
+# Lista extensa de mirrors (con prioridad)
+MIRRORS=(
+    "https://mirror.archlinux32.org"
+    "https://ftp.halifax.rwth-aachen.de/archlinux32"
+    "https://mirror.cyberbits.eu/archlinux32"
+    "https://mirror.ubnt.net/archlinux32"
+    "https://mirror.accum.se/mirror/archlinux32"
+    "https://de.mirror.archlinux32.org"
+    "https://gr.mirror.archlinux32.org"
+    "https://mirror.clarkson.edu/archlinux32"
+    "https://mirror.math.princeton.edu/pub/archlinux32"
+    "https://archlinux32.andreasbaumann.cc"
+)
+
+# Probar mirrors y elegir el primero funcional
+WORKING_MIRROR=""
+for mirror in "${MIRRORS[@]}"; do
+    echo -n "Probando $mirror... "
+    if curl -s --head --max-time 5 "${mirror}/core/os/i686/core.db" > /dev/null 2>&1; then
+        echo -e "${GREEN}OK${NC}"
+        WORKING_MIRROR="$mirror"
+        break
+    else
+        echo -e "${RED}FALLÓ${NC}"
+    fi
+done
+
+if [ -z "$WORKING_MIRROR" ]; then
+    warn "No se encontró ningún mirror funcional. Usando mirror por defecto (archlinux32.org)."
+    WORKING_MIRROR="https://mirror.archlinux32.org"
 fi
 
-# ============================================
-# INSTALAR SISTEMA BASE
-# ============================================
-info "Instalando sistema base (esto puede tardar varios minutos)..."
-pacstrap /mnt base base-devel linux-firmware grub networkmanager nano sudo git
+info "Mirror seleccionado: $WORKING_MIRROR"
+
+# Escribir pacman.conf
+cat > /etc/pacman.conf << EOF
+[options]
+HoldPkg         = pacman glibc
+Architecture    = i686
+SigLevel        = Never
+LocalFileSigLevel = Never
+RemoteFileSigLevel = Never
+ParallelDownloads = 5
+Color
+CheckSpace
+
+[core]
+Server = $WORKING_MIRROR/\$arch/\$repo
+Server = https://mirror.archlinux32.org/\$arch/\$repo
+Server = https://ftp.halifax.rwth-aachen.de/archlinux32/\$arch/\$repo
+
+[extra]
+Server = $WORKING_MIRROR/\$arch/\$repo
+Server = https://mirror.archlinux32.org/\$arch/\$repo
+Server = https://ftp.halifax.rwth-aachen.de/archlinux32/\$arch/\$repo
+
+[community]
+Server = $WORKING_MIRROR/\$arch/\$repo
+Server = https://mirror.archlinux32.org/\$arch/\$repo
+Server = https://ftp.halifax.rwth-aachen.de/archlinux32/\$arch/\$repo
+EOF
 
 # ============================================
-# GENERAR FSTAB
+# 5. INICIALIZAR CLAVES PGP Y SINCRONIZAR
+# ============================================
+info "Inicializando claves PGP (esto puede tardar)..."
+pacman-key --init 2>/dev/null || true
+pacman-key --populate archlinux32 2>/dev/null || true
+pacman -Sy --noconfirm archlinux32-keyring 2>/dev/null || true
+
+info "Sincronizando bases de datos..."
+pacman -Sy --noconfirm || error_exit "Fallo al sincronizar bases de datos. Verifica conexión a internet."
+
+# ============================================
+# 6. INSTALAR SISTEMA BASE
+# ============================================
+info "Instalando sistema base (puede tardar 10-20 minutos)..."
+pacstrap /mnt base base-devel linux-firmware grub networkmanager nano sudo git || error_exit "Falló la instalación base."
+
+# ============================================
+# 7. GENERAR FSTAB
 # ============================================
 info "Generando fstab..."
 genfstab -U /mnt >> /mnt/etc/fstab
 
 # ============================================
-# CHROOT Y CONFIGURACIÓN INICIAL
+# 8. CONFIGURACIÓN INICIAL EN CHROOT
 # ============================================
 info "Configurando el sistema..."
 
 cat > /mnt/root/chroot-config.sh << 'EOF'
 #!/bin/bash
-# Configuración dentro del chroot
+# Configuración básica dentro del chroot
 
 # Zona horaria
 ln -sf /usr/share/zoneinfo/America/Mexico_City /etc/localtime
@@ -235,47 +231,42 @@ sed -i 's/^# %wheel ALL=(ALL:ALL) ALL/%wheel ALL=(ALL:ALL) ALL/' /etc/sudoers
 # Habilitar servicios
 systemctl enable NetworkManager
 
-# GRUB - El disco se inyectará desde el script principal
+# GRUB (el disco se pasa desde el script principal)
 grub-install --target=i386-pc /dev/__DISK__
 grub-mkconfig -o /boot/grub/grub.cfg
 EOF
 
-# Reemplazar el marcador __DISK__ con el disco real
+# Reemplazar marcador con el disco real
 sed -i "s|__DISK__|$DISK|g" /mnt/root/chroot-config.sh
-
 chmod +x /mnt/root/chroot-config.sh
 arch-chroot /mnt /root/chroot-config.sh
 
 # ============================================
-# DESCARGAR Y EJECUTAR PERSONALIZACIÓN XONIARCH
+# 9. DESCARGAR Y EJECUTAR PERSONALIZACIÓN XONIARCH
 # ============================================
-info "Descargando script de personalización Xoniarch32..."
-curl -sSL https://raw.githubusercontent.com/XONIDU/xoniarch32/main/xoniarch-install.sh -o /mnt/root/xoniarch-install.sh || {
-    warn "No se pudo descargar xoniarch-install.sh. Continuando con sistema base..."
-}
-
-if [ -f /mnt/root/xoniarch-install.sh ]; then
+info "Descargando script de personalización Xoniarch..."
+if curl -sSL https://raw.githubusercontent.com/XONIDU/xoniarch32/main/xoniarch-install.sh -o /mnt/root/xoniarch-install.sh; then
     chmod +x /mnt/root/xoniarch-install.sh
     info "Ejecutando personalización..."
     arch-chroot /mnt /root/xoniarch-install.sh
+else
+    warn "No se pudo descargar xoniarch-install.sh. El sistema base está listo, pero faltarán herramientas XONI."
 fi
 
 # ============================================
-# LIMPIEZA FINAL
+# 10. LIMPIEZA
 # ============================================
 rm -f /mnt/root/chroot-config.sh /mnt/root/xoniarch-install.sh 2>/dev/null || true
 
 # ============================================
-# DESMONTAR Y FINALIZAR
+# 11. DESMONTAR Y FINALIZAR
 # ============================================
 info "Desmontando particiones..."
 umount -R /mnt 2>/dev/null || true
-if [ -n "$SWAP_PART" ]; then
-    swapoff "/dev/$SWAP_PART" 2>/dev/null || true
-fi
+[ -n "$SWAP_PART" ] && swapoff "/dev/$SWAP_PART" 2>/dev/null || true
 
 echo -e "${GREEN}========================================${NC}"
-echo -e "${GREEN}   INSTALACIÓN COMPLETADA               ${NC}"
+echo -e "${GREEN}   INSTALACIÓN COMPLETADA EXITOSAMENTE ${NC}"
 echo -e "${GREEN}========================================${NC}"
 echo ""
 echo "Puedes reiniciar ahora:"
