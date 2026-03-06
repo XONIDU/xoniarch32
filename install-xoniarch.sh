@@ -1,9 +1,11 @@
 #!/bin/bash
-# XONIARCH32 - INSTALADOR ÚNICO Y COMPLETO v5.0
+# XONIARCH32 v4.2.0 Ultimate – Instalador único y completo
 # Autor: Darian Alberto Camacho Salas
 # Repositorio: https://github.com/XONIDU/xoniarch32
-# Este script instala todo lo necesario para Xoniarch32 desde un live USB.
-# Las herramientas XONI se instalan después con 'installxoni'.
+# 
+# Este script instala Xoniarch32 en cualquier unidad de almacenamiento
+# (SD, USB, disco interno). Usa PARTUUID para arranque independiente
+# del orden de discos, ideal para sistemas externos.
 
 set -euo pipefail
 trap 'echo -e "\033[0;31m[ERROR] Falló en la línea $LINENO\033[0m" >&2' ERR
@@ -29,7 +31,8 @@ fi
 # ============================================
 clear
 echo "========================================"
-echo "   XONIARCH32 v5.0 - INSTALADOR        "
+echo "   XONIARCH32 v4.2.0 ULTIMATE          "
+echo "   Instalador para unidades externas   "
 echo "========================================"
 echo ""
 echo "Discos disponibles:"
@@ -238,24 +241,37 @@ chmod +x /mnt/root/chroot-config.sh
 arch-chroot /mnt /root/chroot-config.sh
 
 # ============================================
-# 9. Instalar GRUB y verificar
+# 9. Instalar GRUB (con PARTUUID para arranque externo)
 # ============================================
-info "Instalando GRUB..."
+info "Instalando GRUB y configurando con PARTUUID..."
 arch-chroot /mnt grub-install --target=i386-pc "/dev/$DISK"
-arch-chroot /mnt grub-mkconfig -o /boot/grub/grub.cfg
 
-# Verificar que se creó grub.cfg
-if [ ! -f /mnt/boot/grub/grub.cfg ]; then
-    warn "No se generó grub.cfg. Intentando regenerar..."
+# Obtener PARTUUID de la partición raíz
+root_uuid=$(blkid -s PARTUUID -o value "/dev/$ROOT_PART")
+if [ -n "$root_uuid" ]; then
+    info "PARTUUID de la raíz: $root_uuid"
+    # Crear grub.cfg manual con PARTUUID
+    cat > /mnt/boot/grub/grub.cfg << GRUB
+set timeout=5
+set default=0
+
+menuentry "Xoniarch32 (desde unidad externa)" {
+    linux /boot/vmlinuz-linux root=PARTUUID=$root_uuid rw quiet
+    initrd /boot/initramfs-linux.img
+}
+GRUB
+    info "grub.cfg creado con PARTUUID."
+else
+    warn "No se pudo obtener PARTUUID. Usando método tradicional."
     arch-chroot /mnt grub-mkconfig -o /boot/grub/grub.cfg
 fi
 
 # ============================================
-# 10. Instalar paquetes adicionales (lista verificada para i686)
+# 10. Instalar paquetes adicionales con verificación de arquitectura
 # ============================================
 info "Instalando paquetes adicionales (esto puede tardar)..."
 
-# Lista de paquetes reales para i686 (sin versiones, solo nombres)
+# Lista de paquetes deseados (solo nombres)
 PACKAGES=(
     xorg-server
     xorg-xinit
@@ -289,14 +305,29 @@ PACKAGES=(
     lm_sensors
 )
 
-# Instalar paquetes uno por uno para evitar que un fallo detenga todo
+# Función para verificar si un paquete existe y es de arquitectura i686
+check_package() {
+    pkg=$1
+    # Buscar información del paquete en el mirror
+    if pacman -Sp --print-format "%n %a" "$pkg" 2>/dev/null | grep -q "i686"; then
+        return 0
+    else
+        return 1
+    fi
+}
+
+# Instalar paquetes con verificación previa
 for pkg in "${PACKAGES[@]}"; do
-    echo "Instalando $pkg..."
-    arch-chroot /mnt pacman -S --noconfirm "$pkg" 2>/dev/null || warn "No se pudo instalar $pkg (puede no estar disponible). Continuando..."
+    echo "Verificando $pkg..."
+    if check_package "$pkg"; then
+        arch-chroot /mnt pacman -S --noconfirm "$pkg" 2>/dev/null && echo "[OK] $pkg instalado" || warn "Falló instalación de $pkg"
+    else
+        warn "$pkg no está disponible para i686 o no existe. Omitiendo."
+    fi
 done
 
 # Habilitar servicios adicionales (si existen)
-arch-chroot /mnt systemctl enable sddm 2>/dev/null || warn "No se pudo habilitar sddm (puede no estar instalado)"
+arch-chroot /mnt systemctl enable sddm 2>/dev/null || warn "sddm no disponible"
 arch-chroot /mnt systemctl enable tlp 2>/dev/null || true
 arch-chroot /mnt systemctl enable acpid 2>/dev/null || true
 
@@ -415,7 +446,7 @@ cat > /mnt/usr/local/bin/xoniarch-help << 'EOF'
 #!/bin/bash
 cat << 'HELP'
 ========================================
-   XONIARCH32 v5.0 - AYUDA
+   XONIARCH32 v4.2.0 - AYUDA
 ========================================
 COMANDOS:
   installxoni <herramienta>  : Instalar herramienta XONI desde GitHub
@@ -473,14 +504,17 @@ EOF
 chmod +x /mnt/usr/local/bin/*
 
 # ============================================
-# 14. SDDM con auto-login
+# 14. SDDM con auto-login (si está instalado)
 # ============================================
-mkdir -p /mnt/etc/sddm.conf.d
-cat > /mnt/etc/sddm.conf.d/autologin.conf << EOF
+if [ -d /mnt/etc/sddm.conf.d ]; then
+    cat > /mnt/etc/sddm.conf.d/autologin.conf << EOF
 [Autologin]
 User=xoniarch
 Session=openbox.desktop
 EOF
+else
+    warn "SDDM no instalado, el arranque será en modo terminal. Usa 'startx' para iniciar el entorno gráfico."
+fi
 
 # ============================================
 # 15. .bashrc personalizado
@@ -510,7 +544,7 @@ fi
 # ============================================
 cat > /mnt/etc/motd << 'EOF'
 ========================================
-   XONIARCH32 v5.0 - LISTO
+   XONIARCH32 v4.2.0 ULTIMATE - LISTO
    by Darian Alberto Camacho Salas
 ========================================
 
@@ -518,7 +552,7 @@ Instalacion completada con exito.
 Usuario: xoniarch / Contrasena: xoniarch
 Root:    root     / Contrasena: root
 
-El sistema arrancara directamente en modo grafico.
+El sistema arrancara directamente en modo grafico (si SDDM esta instalado).
 La terminal principal es fija (no se puede cerrar).
 
 Comandos utiles:
@@ -532,7 +566,7 @@ Repositorio: https://github.com/XONIDU/xoniarch32
 EOF
 
 # ============================================
-# 18. Verificar GRUB nuevamente antes de desmontar
+# 18. Verificar GRUB nuevamente
 # ============================================
 if [ ! -f /mnt/boot/grub/grub.cfg ]; then
     warn "grub.cfg no se generó. Intentando una última vez..."
