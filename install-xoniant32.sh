@@ -1,12 +1,14 @@
 #!/bin/bash
-# xoniant32 – Script de purga y conversión desde antiX
+# xoniant32 – Script de purga definitiva
 # Autor: Darian Alberto Camacho Salas
 # Repositorio: https://github.com/XONIDU/xoniant32
 #
-# Este script convierte una instalación existente de antiX 386
-# en un sistema xoniant32 puro: solo terminal, sin escritorios,
-# con Openbox como única ventana, terminal fija, audio, nmtui,
-# y scripts XONI.
+# Este script elimina todo lo innecesario de antiX y deja solo:
+#   - Openbox + terminal fija
+#   - Soporte de audio (ALSA)
+#   - Connman para WiFi (como en antiX)
+#   - Herramientas XONI
+#   - NADA MÁS (sin escritorios, sin apps, sin nmtui, sin gestores)
 
 set -euo pipefail
 trap 'echo -e "\033[0;31m[ERROR] Falló en la línea $LINENO\033[0m" >&2' ERR
@@ -20,61 +22,61 @@ error_exit() { echo -e "${RED}[ERROR] $1${NC}" >&2; exit 1; }
 info()  { echo -e "${GREEN}[INFO] $1${NC}"; }
 warn()  { echo -e "${YELLOW}[AVISO] $1${NC}"; }
 
-# Verificar que se ejecuta como root
+# Verificar root
 if [ "$EUID" -ne 0 ]; then 
     error_exit "Este script debe ejecutarse como root (sudo)."
 fi
 
-# Verificar que es antiX
+# Verificar antiX
 if [ ! -f /etc/antix-version ]; then
     error_exit "Este script debe ejecutarse en antiX Linux."
 fi
 
 clear
 echo "========================================"
-echo "   XONIANT32 - PURGA Y CONVERSIÓN      "
-echo "   desde antiX 386                      "
+echo "   XONIANT32 - PURGA DEFINITIVA        "
 echo "========================================"
-echo "ADVERTENCIA: Este script eliminará:"
-echo "  - Todos los entornos de escritorio (XFCE, Fluxbox, IceWM, JWM)"
-echo "  - Aplicaciones innecesarias (libreoffice, firefox-esr, etc.)"
-echo "  - Juegos, herramientas gráficas, y paquetes de desarrollo"
+echo "ADVERTENCIA: Este script ELIMINARÁ:"
+echo "  - TODOS los escritorios (XFCE, Fluxbox, IceWM, JWM)"
+echo "  - TODAS las aplicaciones gráficas"
+echo "  - TODOS los gestores de display"
+echo "  - nmtui y NetworkManager"
+echo ""
+echo "SOLO DEJARÁ:"
+echo "  - Openbox con terminal fija"
+echo "  - ALSA para audio"
+echo "  - Connman para WiFi"
+echo "  - Scripts XONI"
 echo "========================================"
 echo ""
 read -p "¿Estás seguro de continuar? (escribe YES): " CONFIRM
 [ "$CONFIRM" != "YES" ] && error_exit "Operación cancelada."
 
 # ============================================
-# 1. PURGA MASIVA DE PAQUETES INNECESARIOS
+# 1. PURGA MASIVA
 # ============================================
-info "Purgando entornos de escritorio completos..."
+info "Purgando escritorios completos..."
 apt purge -y xfce4* lxde* lxqt* mate-* cinnamon* gnome-* kde-* || true
 
 info "Purgando gestores de ventanas adicionales..."
 apt purge -y fluxbox icewm jwm dwm awesome i3* || true
 
-info "Purgando aplicaciones de oficina..."
-apt purge -y libreoffice* abiword gnumeric || true
-
-info "Purgando navegadores pesados..."
-apt purge -y firefox* chromium* seamonkey* || true
-
-info "Purgando reproductores multimedia..."
-apt purge -y vlc smplayer audacious parole || true
-
-info "Purgando juegos y entretenimiento..."
+info "Purgando aplicaciones gráficas..."
+apt purge -y firefox* chromium* seamonkey* libreoffice* abiword gnumeric || true
+apt purge -y vlc smplayer audacious parole gimp inkscape blender shotwell || true
+apt purge -y thunderbird* claws-mail* sylpheed* || true
 apt purge -y gnome-games* aisleriot solitaire || true
 
-info "Purgando herramientas gráficas..."
-apt purge -y gimp inkscape blender shotwell || true
+info "Purgando gestores de display..."
+apt purge -y lightdm sddm lxdm slim gdm3 xdm || true
 
-info "Purgando clientes de correo..."
-apt purge -y thunderbird* claws-mail* sylpheed* || true
+info "Purgando NetworkManager y nmtui..."
+apt purge -y network-manager* nmtui || true
 
-info "Purgando programas de desarrollo innecesarios..."
+info "Purgando herramientas de desarrollo..."
 apt purge -y build-essential gcc g++ make cmake || true
 
-info "Purgando documentación y manuales..."
+info "Purgando documentación..."
 apt purge -y man-db manpages info || true
 
 # ============================================
@@ -83,26 +85,22 @@ apt purge -y man-db manpages info || true
 info "Eliminando dependencias no usadas..."
 apt autoremove --purge -y
 
-info "Limpiando caché de paquetes..."
+info "Limpiando caché..."
 apt clean
 apt autoclean
 
 # ============================================
-# 3. INSTALAR PAQUETES ESENCIALES XONIANT32
+# 3. INSTALAR PAQUETES ESENCIALES
 # ============================================
-info "Instalando paquetes esenciales..."
+info "Instalando paquetes esenciales mínimos..."
 
-# Actualizar repositorios
 apt update
 
-# Paquetes base
+# Base mínima
 apt install -y git curl wget htop nano
 
-# Audio
-apt install -y alsa-utils pulseaudio pavucontrol
-
-# Red
-apt install -y network-manager network-manager-gnome nmtui
+# Audio (ALSA puro, sin pulseaudio)
+apt install -y alsa-utils
 
 # Xorg mínimo
 apt install -y xorg xserver-xorg-core xserver-xorg-input-all xserver-xorg-video-fbdev
@@ -110,28 +108,21 @@ apt install -y xorg xserver-xorg-core xserver-xorg-input-all xserver-xorg-video-
 # Openbox y terminal fija
 apt install -y openbox obconf tint2 feh picom rxvt-unicode pcmanfm
 
-# Scripts XONI (dependencia git)
-apt install -y git
+# Connman (gestor WiFi nativo de antiX)
+apt install -y connman
 
 # ============================================
-# 4. ELIMINAR GESTORES DE DISPLAY PESADOS
-# ============================================
-info "Eliminando gestores de display..."
-apt purge -y lightdm sddm lxdm slim gdm3 xdm || true
-
-# ============================================
-# 5. CONFIGURAR OPENBOX (TERMINAL FIJA)
+# 4. CONFIGURAR OPENBOX (TERMINAL FIJA)
 # ============================================
 info "Configurando Openbox con terminal fija..."
 
-# Crear estructura de directorios para usuario (si existe)
+# Determinar usuario
 if [ -n "$SUDO_USER" ] && [ "$SUDO_USER" != "root" ]; then
-    USER_HOME="/home/$SUDO_USER"
+    TARGET_USER="$SUDO_USER"
 else
-    # Si no hay SUDO_USER, preguntar
     read -p "Nombre de usuario para configurar: " TARGET_USER
-    USER_HOME="/home/$TARGET_USER"
 fi
+USER_HOME="/home/$TARGET_USER"
 
 mkdir -p "$USER_HOME/.config/openbox"
 
@@ -164,8 +155,6 @@ cat > "$USER_HOME/.config/openbox/menu.xml" << 'EOF'
   <menu id="root-menu" label="Xoniant32">
     <item label="Nueva terminal"><action name="Execute"><command>urxvt</command></action></item>
     <item label="Instalar herramienta XONI"><action name="Execute"><command>urxvt -e installxoni</command></action></item>
-    <item label="Configurar red"><action name="Execute"><command>urxvt -e nmtui</command></action></item>
-    <item label="Monitor sistema"><action name="Execute"><command>urxvt -e htop</command></action></item>
     <item label="Ayuda"><action name="Execute"><command>urxvt -e xoniarch-help</command></action></item>
     <item label="Cerrar sesión"><action name="Exit"/></item>
   </menu>
@@ -186,10 +175,53 @@ exec openbox-session
 EOF
 chmod +x "$USER_HOME/.xinitrc"
 
-chown -R "$SUDO_USER":"$SUDO_USER" "$USER_HOME/.config" "$USER_HOME/.xinitrc" 2>/dev/null || true
+chown -R "$TARGET_USER":"$TARGET_USER" "$USER_HOME/.config" "$USER_HOME/.xinitrc"
 
 # ============================================
-# 6. CREAR SCRIPTS XONI (en /usr/local/bin)
+# 5. CONFIGURAR CONNMAN (WiFi nativo)
+# ============================================
+info "Configurando Connman para WiFi..."
+
+# Asegurar que connman esté habilitado en runit
+mkdir -p /etc/sv/connman
+cat > /etc/sv/connman/run << 'EOF'
+#!/bin/bash
+exec chpst -u root /usr/sbin/connmand -n
+EOF
+chmod +x /etc/sv/connman/run
+
+ln -s /etc/sv/connman /etc/service/connman 2>/dev/null || true
+
+# Mensaje recordatorio para el usuario
+cat > "$USER_HOME/.connman-ayuda" << 'EOF'
+╔═══════════════════════════════════════════════╗
+║   CONECTARSE A WIFI EN XONIANT32              ║
+╚═══════════════════════════════════════════════╝
+
+Comando: sudo connmanctl
+
+Dentro de connmanctl:
+  agent on                  # Activar agente para contraseñas
+  enable wifi               # Habilitar WiFi
+  scan wifi                 # Escanear redes
+  services                  # Listar redes disponibles
+  connect wifi_nombre       # Conectar (usa TAB para autocompletar)
+  quit                      # Salir
+
+Ejemplo:
+  $ sudo connmanctl
+  connmanctl> agent on
+  connmanctl> enable wifi
+  connmanctl> scan wifi
+  connmanctl> services
+  connmanctl> connect wifi_MyHomeNetwork_managed_psk
+  connmanctl> quit
+EOF
+
+chown "$TARGET_USER":"$TARGET_USER" "$USER_HOME/.connman-ayuda"
+
+# ============================================
+# 6. CREAR SCRIPTS XONI
 # ============================================
 info "Creando scripts XONI..."
 
@@ -231,8 +263,11 @@ COMANDOS:
   installxoni <herramienta>  : Instalar desde GitHub
   xoniarch-update            : Actualizar herramientas
   xoniarch-menu              : Menú interactivo
-  nmtui                      : Configurar red
-  htop                       : Monitor del sistema
+  sudo connmanctl            : Configurar WiFi
+
+AUDIO:
+  alsamixer                  : Ajustar volumen
+  speaker-test               : Probar audio
 
 ATAJOS:
   Win + x   : Menú principal
@@ -257,19 +292,15 @@ while true; do
     echo "========================================"
     echo "1) Nueva terminal"
     echo "2) Instalar herramienta XONI"
-    echo "3) Configurar red (nmtui)"
-    echo "4) Monitor del sistema (htop)"
-    echo "5) Ayuda"
-    echo "6) Cerrar sesión"
+    echo "3) Ayuda"
+    echo "4) Cerrar sesión"
     echo ""
-    read -p "Opción [1-6]: " opt
+    read -p "Opción [1-4]: " opt
     case $opt in
         1) urxvt ;;
         2) urxvt -e installxoni ; read -p "Presiona Enter..." ;;
-        3) urxvt -e nmtui ;;
-        4) urxvt -e htop ;;
-        5) xoniarch-help ; read -p "Presiona Enter..." ;;
-        6) openbox --exit ;;
+        3) xoniarch-help ; read -p "Presiona Enter..." ;;
+        4) openbox --exit ;;
         *) echo "Opción inválida"; sleep 2 ;;
     esac
 done
@@ -278,73 +309,67 @@ EOF
 chmod +x /usr/local/bin/*
 
 # ============================================
-# 7. CONFIGURAR ARRANQUE SIN GESTOR DE DISPLAY
+# 7. CONFIGURAR ARRANQUE AUTOMÁTICO
 # ============================================
 info "Configurando arranque automático a X..."
 
-# Añadir al .bashrc del usuario para iniciar X en tty1
-cat >> "$USER_HOME/.bashrc" << 'BASHRC'
-if [ -z "$DISPLAY" ] && [ "$(tty)" = "/dev/tty1" ]; then
-    startx
-fi
-BASHRC
-
-# Configurar getty para auto-login (opcional)
+# Auto-login en tty1
 mkdir -p /etc/systemd/system/getty@tty1.service.d
 cat > /etc/systemd/system/getty@tty1.service.d/autologin.conf << EOF
 [Service]
 ExecStart=
-ExecStart=-/sbin/agetty --autologin $SUDO_USER --noclear %I 38400 linux
+ExecStart=-/sbin/agetty --autologin $TARGET_USER --noclear %I 38400 linux
 EOF
 
-# ============================================
-# 8. CONFIGURAR NETWORKMANAGER PARA runit
-# ============================================
-info "Configurando NetworkManager para antiX (runit)..."
+# Arranque de X en .bashrc
+cat >> "$USER_HOME/.bashrc" << 'BASHRC'
+if [ -z "$DISPLAY" ] && [ "$(tty)" = "/dev/tty1" ]; then
+    startx
+fi
 
-mkdir -p /etc/sv/networkmanager
-cat > /etc/sv/networkmanager/run << 'EOF'
-#!/bin/bash
-exec chpst -u root /usr/sbin/NetworkManager
-EOF
-chmod +x /etc/sv/networkmanager/run
-
-ln -s /etc/sv/networkmanager /etc/service/networkmanager 2>/dev/null || true
-
-# ============================================
-# 9. .bashrc personalizado
-# ============================================
-cat >> "$USER_HOME/.bashrc" << 'BASHRC2'
 alias ll='ls -la'
 alias la='ls -A'
 alias update='xoniarch-update'
 alias menu='xoniarch-menu'
 alias help='xoniarch-help'
-BASHRC2
+alias wifi='sudo connmanctl'
+BASHRC
 
-chown "$SUDO_USER":"$SUDO_USER" "$USER_HOME/.bashrc"
+chown "$TARGET_USER":"$TARGET_USER" "$USER_HOME/.bashrc"
 
 # ============================================
-# 10. LIMPIEZA FINAL Y MENSAJE
+# 8. LIMPIEZA FINAL
 # ============================================
-info "Limpiando paquetes huérfanos finales..."
+info "Limpiando paquetes residuales..."
 apt autoremove --purge -y
 apt clean
 
 echo "========================================"
-echo "   CONVERSIÓN COMPLETADA                "
+echo "   PURGA COMPLETADA                     "
 echo "========================================"
 echo ""
 echo "✅ antiX ha sido transformado en xoniant32"
-echo "📦 Paquetes eliminados: entornos de escritorio, apps pesadas"
-echo "🎯 Solo queda: Openbox + terminal fija + scripts XONI"
 echo ""
-echo "Recomendaciones:"
-echo "1. Reinicia el sistema: sudo reboot"
-echo "2. Al arrancar, entrarás directamente a X con la terminal fija"
-echo "3. Usa 'xoniarch-help' para ver los comandos disponibles"
+echo "📋 RESULTADO FINAL:"
+echo "   ✓ Escritorios eliminados"
+echo "   ✓ Apps gráficas eliminadas"
+echo "   ✓ Gestores de display eliminados"
+echo "   ✓ NetworkManager eliminado"
+echo "   ✓ Openbox + terminal fija instalados"
+echo "   ✓ ALSA para audio"
+echo "   ✓ Connman para WiFi"
+echo "   ✓ Scripts XONI instalados"
 echo ""
-echo "Usuario: $SUDO_USER"
+echo "🌐 CONECTARSE A WIFI:"
+echo "   $ sudo connmanctl"
+echo "   (sigue las instrucciones en ~/.connman-ayuda)"
+echo ""
+echo "🎯 PRÓXIMOS PASOS:"
+echo "   1. Reinicia: sudo reboot"
+echo "   2. Al arrancar, entrarás directamente a X"
+echo "   3. Usa 'xoniarch-help' para ver comandos"
+echo ""
+echo "Usuario: $TARGET_USER"
 echo "Contraseña: la misma de antiX"
 echo ""
 echo "¡Disfruta tu xoniant32 minimalista!"
