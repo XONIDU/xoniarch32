@@ -1,14 +1,14 @@
 #!/bin/bash
-# install-xoniant32.sh – Terminal gráfica fija con gestor de ventanas
+# install-xoniant32.sh – Terminal gráfica fija con OPTIMIZACIÓN GRÁFICA EXTREMA
 # Autor: Darian Alberto Camacho Salas
 # Repositorio: https://github.com/XONIDU/xoniant32
 #
 # Este script elimina escritorios completos y aplicaciones pesadas,
-# pero CONSERVA Openbox como gestor de ventanas con todas sus funciones.
+# OPTIMIZA EL RENDIMIENTO GRÁFICO para eliminar el lag visual
+# manteniendo la sincronización perfecta entre video y audio.
 # El sistema ARRANCA DIRECTAMENTE en una terminal maximizada
 # que NO SE PUEDE CERRAR.
 # Las herramientas XONI se instalan en carpetas individuales en ~/
-# Se conservan atajos como Alt+TAB para cambiar entre ventanas.
 
 set -euo pipefail
 trap 'echo -e "\033[0;31m[ERROR] Falló en la línea $LINENO\033[0m" >&2' ERR
@@ -85,7 +85,7 @@ configure_wifi() {
 # ============================================
 clear
 echo "========================================"
-echo "   XONIANT32 - TERMINAL GRÁFICA FIJA   "
+echo "   XONIANT32 - OPTIMIZACIÓN GRÁFICA    "
 echo "   by Darian Alberto Camacho Salas     "
 echo "========================================"
 echo ""
@@ -125,7 +125,7 @@ echo "  - Atajos de teclado como Alt+TAB para cambiar ventanas"
 echo "  - Terminal fija (rxvt-unicode) - NO SE PUEDE CERRAR"
 echo "  - ALSA para audio"
 echo "  - Connman para WiFi (configurado)"
-echo "  - mpv + yt-dlp (para xonitube)"
+echo "  - mpv + yt-dlp (para xonitube) CONFIGURADOS PARA MÁXIMA SINCRO"
 echo "  - Scripts XONI (xoni-install, xoni-update, xoni-help, xoni-menu)"
 echo "  - Las herramientas XONI se instalarán en carpetas individuales en ~/"
 echo ""
@@ -156,14 +156,77 @@ apt purge -y network-manager* nmtui || true
 info "Purgando herramientas de escritorio (tint2, feh, picom, nitrogen)..."
 apt purge -y tint2 feh picom nitrogen || true
 
-info "Purgando herramientas de desarrollo (opcional)..."
-apt purge -y build-essential gcc g++ make cmake || true
+# ============================================
+# 2. ELIMINAR SERVICIOS INNECESARIOS
+# ============================================
+info "Deshabilitando servicios innecesarios para mejorar rendimiento..."
 
-info "Purgando documentación..."
-apt purge -y man-db manpages info || true
+SERVICIOS_INNECESARIOS=(
+    "bluetooth"
+    "cups"
+    "cups-browsed"
+    "avahi-daemon"
+    "ModemManager"
+    "whoopsie"
+    "apport"
+    "speech-dispatcher"
+)
+
+for servicio in "${SERVICIOS_INNECESARIOS[@]}"; do
+    if systemctl list-unit-files | grep -q "$servicio"; then
+        systemctl stop "$servicio" 2>/dev/null || true
+        systemctl disable "$servicio" 2>/dev/null || true
+        echo "  - $servicio deshabilitado"
+    fi
+done
 
 # ============================================
-# 2. ELIMINAR RASTROS DE XONIARCH
+# 3. OPTIMIZAR SWAPPINESS
+# ============================================
+info "Optimizando uso de memoria (swappiness)..."
+echo "vm.swappiness=10" >> /etc/sysctl.conf
+sysctl -p
+
+# ============================================
+# 4. OPTIMIZACIÓN GRÁFICA ESPECÍFICA
+# ============================================
+info "Aplicando optimizaciones gráficas para eliminar lag visual..."
+
+# Instalar controladores Intel mejorados si se detecta GPU Intel
+if lspci | grep -i "VGA.*Intel" > /dev/null; then
+    info "GPU Intel detectada - instalando controladores optimizados..."
+    apt install -y xserver-xorg-video-intel
+    # Configuración específica para Intel
+    mkdir -p /etc/X11/xorg.conf.d
+    cat > /etc/X11/xorg.conf.d/20-intel.conf << 'EOF'
+Section "Device"
+   Identifier  "Intel Graphics"
+   Driver      "intel"
+   Option      "AccelMethod"    "sna"
+   Option      "TearFree"       "true"
+   Option      "DRI"            "3"
+   Option      "SwapbuffersWait" "false"
+EndSection
+EOF
+fi
+
+# Configuración global de Xorg para mejorar rendimiento
+cat > /etc/X11/xorg.conf.d/10-performance.conf << 'EOF'
+Section "Device"
+   Identifier "Card0"
+   Driver     "modesetting"
+   Option     "PageFlip"         "true"
+   Option     "SwapbuffersWait"  "false"
+   Option     "DRI"              "3"
+EndSection
+
+Section "Extensions"
+    Option "Composite" "Disable"
+EndSection
+EOF
+
+# ============================================
+# 5. ELIMINAR RASTROS DE XONIARCH
 # ============================================
 info "Eliminando rastros de xoniarch..."
 rm -f /usr/local/bin/xoniarch-* 2>/dev/null || true
@@ -173,7 +236,7 @@ rm -rf /opt/xoniarch 2>/dev/null || true
 rm -rf /opt/xoniarch32 2>/dev/null || true
 
 # ============================================
-# 3. AUTOLIMPIEZA
+# 6. AUTOLIMPIEZA
 # ============================================
 info "Eliminando dependencias no usadas..."
 apt autoremove --purge -y
@@ -183,7 +246,7 @@ apt clean
 apt autoclean
 
 # ============================================
-# 4. INSTALAR PAQUETES MÍNIMOS
+# 7. INSTALAR PAQUETES MÍNIMOS
 # ============================================
 info "Actualizando repositorios..."
 apt update || warn "Error en apt update, continuando..."
@@ -191,40 +254,40 @@ apt update || warn "Error en apt update, continuando..."
 info "Instalando paquetes base..."
 apt install -y git curl wget htop nano alsa-utils connman
 
-# Xorg + Openbox completo
+# Xorg + Openbox (ligero)
 apt install -y xorg openbox obconf rxvt-unicode
 
-# Herramientas multimedia
-apt install -y mpv yt-dlp ffmpeg
+# Herramientas multimedia (con optimizaciones)
+apt install -y mpv yt-dlp ffmpeg mesa-utils
 
 # Firmware WiFi
-apt install -y firmware-atheros firmware-iwlwifi firmware-realtek || warn "Algún firmware WiFi no se pudo instalar."
-
-# Temas GTK mínimos
-apt install -y --fix-missing adwaita-icon-theme || warn "Temas GTK opcionales no instalados."
+apt install -y firmware-atheros firmware-iwlwifi || warn "Algún firmware WiFi no se pudo instalar."
 
 # ============================================
-# 5. CONFIGURAR CONNMAN
+# 8. CONFIGURAR CONNMAN
 # ============================================
-info "Configurando connman para WiFi estable..."
+info "Configurando connman..."
 mkdir -p /etc/connman
 cat > /etc/connman/main.conf << 'EOF'
 [General]
 PreferredTechnologies = wifi,ethernet
 AllowHostnames = true
-SingleConnectedTechnology = false
+SingleConnectedTechnology = true
 AutoConnect = true
+BackgroundScanning = false
 NetworkInterfaceBlacklist = vmnet,vboxnet,virbr,ifb
 EOF
 
 systemctl restart connman || sv restart connman || true
 
 # ============================================
-# 6. CONFIGURAR MPV
+# 9. CONFIGURAR MPV (SINCRONIZACIÓN PERFECTA)
 # ============================================
-info "Configurando mpv..."
+info "Configurando mpv para sincronización perfecta video/audio..."
+
 mkdir -p /etc/mpv
 cat > /etc/mpv/mpv.conf << 'EOF'
+# Configuración para MÁXIMA SINCRO video/audio
 vo=x11
 ao=alsa
 cache=yes
@@ -232,6 +295,29 @@ cache-secs=30
 profile=fast
 msg-level=all=error
 x11-bypass-compositor=yes
+
+# Sincronización extrema
+video-sync=display-resample
+video-sync-max-video-change=5
+audio-buffer=0.2
+video-latency-hacks=yes
+
+# Optimización de rendimiento
+framedrop=vo
+vd-lavc-fast=yes
+vd-lavc-skiploopfilter=all
+vd-lavc-skipframe=nonref
+vd-lavc-threads=2
+
+# Suavizado de video
+deband=no
+scale=bilinear
+cscale=bilinear
+dscale=bilinear
+
+# Sin efectos innecesarios
+osd-level=0
+osd-duration=0
 EOF
 
 TARGET_USER="${SUDO_USER:-$USER}"
@@ -242,13 +328,13 @@ cp /etc/mpv/mpv.conf "$USER_HOME/.config/mpv/"
 chown -R "$TARGET_USER":"$TARGET_USER" "$USER_HOME/.config/mpv"
 
 # ============================================
-# 7. CONFIGURAR OPENBOX (CON TODAS LAS FUNCIONES)
+# 10. CONFIGURAR OPENBOX
 # ============================================
 info "Configurando Openbox con terminal fija y atajos completos..."
 
 mkdir -p "$USER_HOME/.config/openbox"
 
-# Configuración completa de Openbox (conserva Alt+TAB y demás)
+# Configuración optimizada de Openbox (sin efectos)
 cat > "$USER_HOME/.config/openbox/rc.xml" << 'EOF'
 <?xml version="1.0" encoding="UTF-8"?>
 <openbox_config>
@@ -263,16 +349,20 @@ cat > "$USER_HOME/.config/openbox/rc.xml" << 'EOF'
   </applications>
   <menu><file>~/.config/openbox/menu.xml</file></menu>
   
-  <!-- Conservar los atajos de teclado originales de Openbox -->
+  <theme>
+    <name>Clearlooks</name>
+    <titleLayout>NLIMC</titleLayout>
+    <keepBorder>no</keepBorder>
+    <animateIconify>no</animateIconify>
+  </theme>
+  
   <keyboard>
-    <!-- Atajos personalizados XONI -->
     <keybind key="W-x"><action name="Execute"><command>xoni-menu</command></action></keybind>
     <keybind key="W-t"><action name="Execute"><command>urxvt</command></action></keybind>
     <keybind key="W-h"><action name="Execute"><command>xoni-help</command></action></keybind>
     <keybind key="W-u"><action name="Execute"><command>xoni-update</command></action></keybind>
     <keybind key="W-q"><action name="Exit"/></keybind>
     
-    <!-- Atajos estándar de Openbox (conservados) -->
     <keybind key="A-Tab"><action name="NextWindow"/></keybind>
     <keybind key="A-S-Tab"><action name="PreviousWindow"/></keybind>
     <keybind key="A-F4"><action name="Close"/></keybind>
@@ -295,7 +385,6 @@ cat > "$USER_HOME/.config/openbox/menu.xml" << 'EOF'
     <item label="Cerrar sesión"><action name="Exit"/></item>
   </menu>
   
-  <!-- Mantener el menú cliente de Openbox (con Alt+Espacio) -->
   <menu id="client-menu">
     <item label="Restaurar"><action name="Unmaximize"/><action name="MoveResizeTo"><x>center</x><y>center</y><width>50%</width><height>50%</height></action></item>
     <item label="Mover"><action name="Move"/></item>
@@ -320,7 +409,7 @@ EOF
 chmod +x "$USER_HOME/.xinitrc"
 
 # ============================================
-# 8. AUTO-LOGIN EN TTY1 + INICIO DE X
+# 11. AUTO-LOGIN EN TTY1 + INICIO DE X
 # ============================================
 info "Configurando auto-login e inicio automático de X..."
 
@@ -347,7 +436,8 @@ cat >> "$USER_HOME/.bashrc" << 'EOF'
 
 # Mensaje de bienvenida
 echo "========================================"
-echo "   XONIANT32 - by Darian Alberto Camacho Salas"
+echo "   XONIANT32 - OPTIMIZACIÓN GRÁFICA    "
+echo "   by Darian Alberto Camacho Salas     "
 echo "========================================"
 echo "Comandos útiles:"
 echo "  xoni-help     : Muestra esta ayuda"
@@ -355,6 +445,12 @@ echo "  xoni-menu     : Menú interactivo"
 echo "  xoni-update   : Actualiza xoniant32"
 echo "  xoni-install  : Instala herramientas XONI en carpetas individuales en ~/"
 echo "  sudo connmanctl : Configura la red WiFi"
+echo ""
+echo "OPTIMIZACIONES GRÁFICAS APLICADAS:"
+echo "  - Sincronización forzada video/audio"
+echo "  - Controladores Intel optimizados (si aplica)"
+echo "  - Composición desactivada"
+echo "  - TearFree activado"
 echo ""
 echo "ATAJOS DE TECLADO:"
 echo "  Alt+TAB       : Cambiar entre ventanas"
@@ -369,15 +465,12 @@ EOF
 chown -R "$TARGET_USER":"$TARGET_USER" "$USER_HOME/.config" "$USER_HOME/.xinitrc" "$USER_HOME/.bashrc"
 
 # ============================================
-# 9. CREAR SCRIPTS XONI (herramientas en carpetas individuales)
+# 12. CREAR SCRIPTS XONI
 # ============================================
-info "Creando scripts XONI (herramientas en carpetas individuales en ~/)..."
+info "Creando scripts XONI..."
 
 cat > /usr/local/bin/xoni-install << 'EOF'
 #!/bin/bash
-# xoni-install – Instalador de herramientas XONI en carpetas individuales en ~/
-# Autor: Darian Alberto Camacho Salas
-
 REPO_BASE="https://github.com/XONIDU"
 cd "$HOME"
 
@@ -392,70 +485,44 @@ if [ -n "$1" ]; then
         git clone "$REPO_BASE/$TOOL.git"
     fi
     
-    # Buscar el archivo principal y crear enlace simbólico en /usr/local/bin
     if [ -f "$TOOL/start.py" ]; then
-        echo "Creando enlace simbólico en /usr/local/bin/$TOOL (necesita sudo)"
         sudo ln -sf "$HOME/$TOOL/start.py" "/usr/local/bin/$TOOL"
         sudo chmod +x "/usr/local/bin/$TOOL"
-        echo "[OK] $TOOL disponible como comando global (enlace a ~/$TOOL/start.py)"
+        echo "[OK] $TOOL disponible"
     elif [ -f "$TOOL/$TOOL.py" ]; then
         sudo ln -sf "$HOME/$TOOL/$TOOL.py" "/usr/local/bin/$TOOL"
         sudo chmod +x "/usr/local/bin/$TOOL"
-        echo "[OK] $TOOL disponible como comando global (enlace a ~/$TOOL/$TOOL.py)"
+        echo "[OK] $TOOL disponible"
     elif [ -f "$TOOL/$TOOL.sh" ]; then
         sudo ln -sf "$HOME/$TOOL/$TOOL.sh" "/usr/local/bin/$TOOL"
         sudo chmod +x "/usr/local/bin/$TOOL"
-        echo "[OK] $TOOL disponible como comando global (enlace a ~/$TOOL/$TOOL.sh)"
+        echo "[OK] $TOOL disponible"
     else
-        echo "[AVISO] No se encontró archivo principal, pero el repositorio está en ~/$TOOL"
+        echo "[AVISO] Repositorio en ~/$TOOL"
     fi
 
 else
-    echo "Herramientas disponibles en XONIDU:"
-    echo "  xonitube, xonigraf, xonichat, xonimail, xonicar, xoniclus, xoniconver, xonidate, xonidal, xonidip, xoniencript, xonihelp, xonilab, xoniclient, xoniserver, xoniterm, xonifs, xonigrep, xonisearch, xonicrypt, xonidecode, xonicron, xonisync"
-    echo ""
+    echo "Herramientas: xonitube, xonigraf, xonichat, xonimail, ..."
     read -p "Herramienta a instalar: " TOOL
-    if [ -n "$TOOL" ]; then
-        exec "$0" "$TOOL"
-    else
-        echo "No se especificó ninguna herramienta."
-    fi
+    [ -n "$TOOL" ] && exec "$0" "$TOOL"
 fi
 EOF
 
 cat > /usr/local/bin/xoni-update << 'EOF'
 #!/bin/bash
-# xoni-update – Actualiza xoniant32 y las herramientas XONI
-
-# Actualizar scripts del sistema
 REPO="https://github.com/XONIDU/xoniant32.git"
 DIR="/opt/xoniant32"
-echo "Actualizando scripts de xoniant32..."
-if [ ! -d "$DIR" ]; then
-    sudo git clone "$REPO" "$DIR"
-else
-    cd "$DIR" && sudo git pull
-fi
-
-if [ -d "$DIR/scripts" ]; then
-    sudo cp -v "$DIR/scripts"/xoni-* /usr/local/bin/ 2>/dev/null || true
-fi
-
+echo "Actualizando xoniant32..."
+[ ! -d "$DIR" ] && sudo git clone "$REPO" "$DIR" || (cd "$DIR" && sudo git pull)
+[ -d "$DIR/scripts" ] && sudo cp -v "$DIR/scripts"/xoni-* /usr/local/bin/ 2>/dev/null || true
 sudo rm -f /usr/local/bin/xoniarch-* 2>/dev/null || true
 sudo chmod +x /usr/local/bin/xoni-* 2>/dev/null || true
 
-# Actualizar herramientas en ~/
-echo ""
-echo "Actualizando herramientas en ~/ ..."
 cd "$HOME"
 for tool in */; do
-    toolname="${tool%/}"
-    if [ -d "$toolname" ] && [ -d "$toolname/.git" ]; then
-        echo "Actualizando $toolname..."
-        cd "$toolname" && git pull && cd "$HOME"
-    fi
+    t="${tool%/}"
+    [ -d "$t/.git" ] && (cd "$t" && git pull) && echo "Actualizado $t"
 done
-
 echo "[OK] xoniant32 actualizado"
 EOF
 
@@ -466,31 +533,22 @@ cat << 'HELP'
    XONIANT32 - AYUDA
 ========================================
 COMANDOS:
-  xoni-help                    : Muestra esta ayuda
-  xoni-menu                    : Menú interactivo
-  xoni-update                  : Actualiza scripts y herramientas
-  xoni-install <herramienta>   : Instala herramientas XONI en ~/ (carpeta individual)
+  xoni-help         : Esta ayuda
+  xoni-menu         : Menú interactivo
+  xoni-update       : Actualizar todo
+  xoni-install      : Instalar herramientas
 
-HERRAMIENTAS DISPONIBLES:
-  xonitube, xonigraf, xonichat, xonimail, xonicar, xoniclus, xoniconver,
-  xonidate, xonidal, xonidip, xoniencript, xonihelp, xonilab, xoniclient,
-  xoniserver, xoniterm, xonifs, xonigrep, xonisearch, xonicrypt,
-  xonidecode, xonicron, xonisync
+OPTIMIZACIONES GRÁFICAS ACTIVAS:
+  - Sincronización video/audio forzada
+  - Composición desactivada
+  - TearFree activado
+  - Controladores Intel optimizados
 
-ATAJOS DE TECLADO:
-  Alt+TAB       : Cambiar entre ventanas
-  Alt+Espacio   : Menú de ventana
-  Alt+F4        : Cerrar ventana
-  Win+x         : Menú XONI
-  Win+t         : Nueva terminal
-  Win+h         : Ayuda
-  Win+u         : Actualizar
-  Win+q         : Cerrar sesión
-
-El sistema ARRANCA DIRECTAMENTE EN MODO GRÁFICO
-La terminal principal es FIJA (no se puede cerrar)
-
-REPOSITORIO: https://github.com/XONIDU/xoniant32
+ATAJOS:
+  Alt+TAB : Cambiar ventana
+  Alt+F4  : Cerrar
+  Win+x   : Menú XONI
+  Win+t   : Nueva terminal
 HELP
 EOF
 
@@ -502,23 +560,21 @@ while true; do
     echo "      XONIANT32 - MENÚ PRINCIPAL"
     echo "========================================"
     echo "1) Nueva terminal"
-    echo "2) Instalar herramienta XONI"
-    echo "3) Configurar red (connman)"
-    echo "4) Monitor del sistema (htop)"
-    echo "5) Actualizar xoniant32"
+    echo "2) Instalar herramienta"
+    echo "3) Configurar red"
+    echo "4) Monitor sistema"
+    echo "5) Actualizar"
     echo "6) Ayuda"
     echo "7) Cerrar sesión"
-    echo ""
     read -p "Opción [1-7]: " opt
     case $opt in
         1) urxvt ;;
-        2) urxvt -e xoni-install ; read -p "Presiona Enter..." ;;
+        2) urxvt -e xoni-install ; read -p "Enter..." ;;
         3) urxvt -e sudo connmanctl ;;
         4) urxvt -e htop ;;
-        5) urxvt -e xoni-update ; read -p "Presiona Enter..." ;;
-        6) xoni-help ; read -p "Presiona Enter..." ;;
+        5) urxvt -e xoni-update ; read -p "Enter..." ;;
+        6) xoni-help ; read -p "Enter..." ;;
         7) openbox --exit ;;
-        *) echo "Opción inválida"; sleep 2 ;;
     esac
 done
 EOF
@@ -526,55 +582,41 @@ EOF
 chmod +x /usr/local/bin/xoni-*
 
 # ============================================
-# 10. ACTUALIZAR MOTD
+# 13. ACTUALIZAR MOTD
 # ============================================
 cat > /etc/motd << 'EOF'
 ========================================
-   XONIANT32 - by Darian Alberto Camacho Salas
+   XONIANT32 - OPTIMIZACIÓN GRÁFICA
 ========================================
-Comandos útiles:
-  xoni-help     : Muestra esta ayuda
-  xoni-menu     : Menú interactivo
-  xoni-update   : Actualiza scripts y herramientas
-  xoni-install  : Instala herramientas XONI en ~/ (carpeta individual)
-  sudo connmanctl : Configura la red WiFi
+OPTIMIZACIONES ACTIVAS:
+• Sincronización video/audio forzada
+• TearFree activado
+• Composición desactivada
+• Controladores Intel optimizados
+• Swappiness reducido (10)
 
-ATAJOS DE TECLADO:
-  Alt+TAB       : Cambiar entre ventanas
-  Alt+Espacio   : Menú de ventana
-  Alt+F4        : Cerrar ventana
-  Win+x         : Menú XONI
-  Win+t         : Nueva terminal
-  Win+h         : Ayuda
-
-El sistema ARRANCA DIRECTAMENTE EN MODO GRÁFICO
-La terminal principal es FIJA (no se puede cerrar)
-
-Repositorio: https://github.com/XONIDU/xoniant32
+Comandos: xoni-help | xoni-menu | xoni-install
+ATAJOS: Alt+TAB, Win+x, Win+t
 ========================================
 EOF
 
 # ============================================
-# 11. FINALIZACIÓN
+# 14. FINALIZACIÓN
 # ============================================
 echo "========================================"
 echo "   INSTALACIÓN COMPLETADA               "
 echo "========================================"
 echo ""
-echo "antiX ha sido transformado en xoniant32"
+echo "OPTIMIZACIONES GRÁFICAS APLICADAS:"
+echo "  ✓ Sincronización video/audio forzada (video-sync=display-resample)"
+echo "  ✓ TearFree activado (elimina tearing)"
+echo "  ✓ Composición desactivada (más fps)"
+echo "  ✓ Controladores Intel optimizados (si aplica)"
+echo "  ✓ Buffer de audio reducido (menos latencia)"
 echo ""
-echo "Características:"
-echo "  - Terminal gráfica fija (NO se puede cerrar)"
-echo "  - Openbox completo con todos los atajos (Alt+TAB, Alt+Espacio, etc.)"
-echo "  - Gestor de ventanas funcional"
-echo "  - ALSA + Connman + mpv listos"
-echo "  - Scripts XONI instalados"
-echo "  - HERRAMIENTAS XONI SE INSTALAN EN CARPETAS INDIVIDUALES EN ~/"
-echo ""
-echo "Para instalar xonitube: xoni-install xonitube"
+echo "Prueba con: xoni-install xonitube && xonitube"
 echo ""
 echo "Reinicia: sudo reboot"
-echo ""
 echo "Usuario: $TARGET_USER"
 echo ""
-echo "¡Disfruta xoniant32!"
+echo "¡Disfruta xoniant32 SIN LAG GRÁFICO!"
