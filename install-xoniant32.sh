@@ -9,7 +9,7 @@
 #   - ALSA para audio
 #   - Connman para WiFi
 #   - Scripts XONI (xoni-install, xoni-update, xoni-help, xoni-menu)
-#   - xonitube, xonigraf, xonichat, xonimail (desde GitHub)
+#   - Herramientas desde XONIDU: xonitube, xonigraf, xonichat, xonimail
 #   - Sin rastros de xoniarch
 
 set -euo pipefail
@@ -52,7 +52,7 @@ echo "  - Openbox con terminal fija"
 echo "  - ALSA para audio"
 echo "  - Connman para WiFi"
 echo "  - Scripts XONI (xoni-install, xoni-update, xoni-help, xoni-menu)"
-echo "  - xonitube, xonigraf, xonichat, xonimail (desde GitHub)"
+echo "  - Herramientas desde XONIDU: xonitube, xonigraf, xonichat, xonimail"
 echo ""
 read -p "¿Estás seguro? (escribe YES): " CONFIRM
 [ "$CONFIRM" != "YES" ] && error_exit "Operación cancelada."
@@ -198,12 +198,12 @@ echo "Comandos útiles:"
 echo "  xoni-help     : Muestra esta ayuda"
 echo "  xoni-menu     : Menú interactivo"
 echo "  xoni-update   : Actualiza xoniant32 desde GitHub"
-echo "  xoni-install  : Instala herramientas XONI"
+echo "  xoni-install  : Instala herramientas XONI adicionales"
 echo "  sudo connmanctl : Configura la red WiFi"
-echo "  xonitube      : Buscador de YouTube"
-echo "  xonigraf      : Graficador matemático"
-echo "  xonichat      : Chat con IA"
-echo "  xonimail      : Cliente de correo"
+echo "  xonitube      : Buscador de YouTube (desde XONIDU)"
+echo "  xonigraf      : Graficador matemático (desde XONIDU)"
+echo "  xonichat      : Chat con IA (desde XONIDU)"
+echo "  xonimail      : Cliente de correo (desde XONIDU)"
 echo "========================================"
 EOF
 
@@ -216,51 +216,79 @@ mkdir -p /opt/xoni
 chown -R "$TARGET_USER":"$TARGET_USER" /opt/xoni 2>/dev/null || true
 
 # ============================================
-# 7. INSTALAR XONITUBE DIRECTAMENTE
+# 7. INSTALAR XONITUBE DESDE XONIDU
 # ============================================
-info "Instalando xonitube..."
-if curl -sSL -o /tmp/xonitube.py https://raw.githubusercontent.com/XONIDU/xonitube/main/xonitube.py; then
-    cp /tmp/xonitube.py /usr/local/bin/xonitube
+info "Instalando xonitube desde XONIDU..."
+cd /opt/xoni
+if [ ! -d "xonitube" ]; then
+    sudo -u "$TARGET_USER" git clone https://github.com/XONIDU/xonitube.git
+else
+    sudo -u "$TARGET_USER" git -C xonitube pull
+fi
+
+if [ -f "xonitube/xonitube.py" ]; then
+    cp xonitube/xonitube.py /usr/local/bin/xonitube
     chmod +x /usr/local/bin/xonitube
     info "xonitube instalado correctamente."
 else
-    warn "No se pudo descargar xonitube. Se instalará después con xoni-install."
+    warn "No se encontró el archivo principal de xonitube."
 fi
 
 # ============================================
-# 8. INSTALAR XONIGRAF DIRECTAMENTE
+# 8. INSTALAR XONIGRAF DESDE XONIDU
 # ============================================
-info "Instalando xonigraf..."
-if curl -sSL -o /tmp/xonigraf.py https://raw.githubusercontent.com/XONIDU/xonigraf/main/xonigraf.py; then
-    cp /tmp/xonigraf.py /usr/local/bin/xonigraf
+info "Instalando xonigraf desde XONIDU..."
+cd /opt/xoni
+if [ ! -d "xonigraf" ]; then
+    sudo -u "$TARGET_USER" git clone https://github.com/XONIDU/xonigraf.git
+else
+    sudo -u "$TARGET_USER" git -C xonigraf pull
+fi
+
+if [ -f "xonigraf/xonigraf.py" ]; then
+    cp xonigraf/xonigraf.py /usr/local/bin/xonigraf
     chmod +x /usr/local/bin/xonigraf
     info "xonigraf instalado correctamente."
 else
-    warn "No se pudo descargar xonigraf. Se instalará después con xoni-install."
+    warn "No se encontró el archivo principal de xonigraf."
 fi
 
 # ============================================
-# 9. INSTALAR XONICHAT DIRECTAMENTE
+# 9. INSTALAR XONICHAT DESDE XONIDU
 # ============================================
-info "Instalando xonichat..."
-if curl -sSL -o /tmp/xonichat.py https://raw.githubusercontent.com/XONIDU/xonichat/main/xonichat.py; then
-    cp /tmp/xonichat.py /usr/local/bin/xonichat
+info "Instalando xonichat desde XONIDU..."
+cd /opt/xoni
+if [ ! -d "xonichat" ]; then
+    sudo -u "$TARGET_USER" git clone https://github.com/XONIDU/xonichat.git
+else
+    sudo -u "$TARGET_USER" git -C xonichat pull
+fi
+
+if [ -f "xonichat/xonichat.py" ]; then
+    cp xonichat/xonichat.py /usr/local/bin/xonichat
     chmod +x /usr/local/bin/xonichat
     info "xonichat instalado correctamente."
 else
-    warn "No se pudo descargar xonichat. Se instalará después con xoni-install."
+    warn "No se encontró el archivo principal de xonichat."
 fi
 
 # ============================================
-# 10. INSTALAR XONIMAIL DIRECTAMENTE
+# 10. INSTALAR XONIMAIL DESDE XONIDU
 # ============================================
-info "Instalando xonimail..."
-if curl -sSL -o /tmp/xonimail.py https://raw.githubusercontent.com/XONIDU/xonimail/main/xonimail.py; then
-    cp /tmp/xonimail.py /usr/local/bin/xonimail
+info "Instalando xonimail desde XONIDU..."
+cd /opt/xoni
+if [ ! -d "xonimail" ]; then
+    sudo -u "$TARGET_USER" git clone https://github.com/XONIDU/xonimail.git
+else
+    sudo -u "$TARGET_USER" git -C xonimail pull
+fi
+
+if [ -f "xonimail/xonimail.py" ]; then
+    cp xonimail/xonimail.py /usr/local/bin/xonimail
     chmod +x /usr/local/bin/xonimail
     info "xonimail instalado correctamente."
 else
-    warn "No se pudo descargar xonimail. Se instalará después con xoni-install."
+    warn "No se encontró el archivo principal de xonimail."
 fi
 
 # ============================================
@@ -354,32 +382,18 @@ COMANDOS PRINCIPALES:
   xoni-help                    : Muestra esta ayuda
   xoni-menu                    : Menú interactivo
   xoni-update                   : Actualiza xoniant32 y herramientas
-  xoni-install <herramienta>   : Instala herramientas XONI desde GitHub
+  xoni-install <herramienta>   : Instala herramientas XONI adicionales
 
-HERRAMIENTAS XONI DISPONIBLES:
+HERRAMIENTAS XONI INSTALADAS (desde XONIDU):
   xonitube    : Buscador y reproductor de YouTube
   xonigraf    : Graficador matemático
   xonichat    : Chat con IA (Gemini)
   xonimail    : Cliente de correo desde terminal
-  xonicar     : Herramienta para vehículos
-  xoniclus    : Utilidades para clusters
-  xoniconver  : Conversor de formatos
-  xonidate    : Gestor de fechas
-  xonidal     : Utilidades varias
-  xonidip     : Herramienta DIP
-  xoniencript : Cifrado de archivos
-  xonihelp    : Ayuda adicional
-  xonilab     : Laboratorio
-  xoniclient  : Cliente de red
-  xoniserver  : Servidor
-  xoniterm    : Terminal mejorada
-  xonifs      : Sistema de archivos
-  xonigrep    : Buscador de texto
-  xonisearch  : Buscador general
-  xonicrypt   : Criptografía
-  xonidecode  : Decodificador
-  xonicron    : Gestor de tareas
-  xonisync    : Sincronizador
+
+OTRAS HERRAMIENTAS DISPONIBLES:
+  xonicar, xoniclus, xoniconver, xonidate, xonidal, xonidip, xoniencript
+  xonihelp, xonilab, xoniclient, xoniserver, xoniterm, xonifs, xonigrep
+  xonisearch, xonicrypt, xonidecode, xonicron, xonisync
 
 ATAJOS DE TECLADO (en Openbox):
   Win + x   : Menú principal
@@ -441,12 +455,12 @@ Comandos útiles:
   xoni-help     : Muestra esta ayuda
   xoni-menu     : Menú interactivo
   xoni-update   : Actualiza xoniant32 desde GitHub
-  xoni-install  : Instala herramientas XONI
+  xoni-install  : Instala herramientas XONI adicionales
   sudo connmanctl : Configura la red WiFi
-  xonitube      : Buscador de YouTube
-  xonigraf      : Graficador matemático
-  xonichat      : Chat con IA
-  xonimail      : Cliente de correo
+  xonitube      : Buscador de YouTube (XONIDU)
+  xonigraf      : Graficador matemático (XONIDU)
+  xonichat      : Chat con IA (XONIDU)
+  xonimail      : Cliente de correo (XONIDU)
 
 El sistema arranca directamente en modo gráfico.
 La terminal principal es fija (no se puede cerrar).
@@ -469,7 +483,11 @@ echo "  - Openbox con terminal fija"
 echo "  - ALSA (audio)"
 echo "  - Connman (WiFi)"
 echo "  - Scripts XONI: xoni-install, xoni-update, xoni-help, xoni-menu"
-echo "  - xonitube, xonigraf, xonichat, xonimail"
+echo "  - Herramientas desde XONIDU:"
+echo "    * xonitube (YouTube)"
+echo "    * xonigraf (graficador)"
+echo "    * xonichat (IA)"
+echo "    * xonimail (correo)"
 echo ""
 echo "No hay escritorio, barras, fondos ni gestores de display."
 echo "WiFi: sudo connmanctl (opción 3 del menú)"
