@@ -10,9 +10,9 @@
 #   - Terminal fija (rxvt-unicode)
 #   - Audio (ALSA)
 #   - Connman (sin configuración extra)
-#   - Temas GTK (para que funcionen apps como mgba-qt)
-#   - Scripts XONI
-#   - NADA MÁS (sin escritorios, barras, gestores de display)
+#   - Temas GTK (para que funcionen apps gráficas)
+#   - Scripts XONI (prefijo xoni-)
+#   - NADA MÁS
 
 set -euo pipefail
 trap 'echo -e "\033[0;31m[ERROR] Falló en la línea $LINENO\033[0m" >&2' ERR
@@ -53,8 +53,8 @@ echo "  - Openbox"
 echo "  - Terminal fija (rxvt-unicode)"
 echo "  - ALSA para audio"
 echo "  - Connman (sin configuración extra)"
-echo "  - Temas GTK (para apps gráficas como mgba-qt)"
-echo "  - Scripts XONI"
+echo "  - Temas GTK (para apps gráficas)"
+echo "  - Scripts XONI (xoni-install, xoni-update, xoni-help, xoni-menu)"
 echo ""
 read -p "¿Estás seguro? (escribe YES): " CONFIRM
 [ "$CONFIRM" != "YES" ] && error_exit "Operación cancelada."
@@ -90,8 +90,8 @@ info "Purgando documentación..."
 apt purge -y man-db manpages info || true
 
 # NO purgamos temas GTK ni bibliotecas gráficas esenciales
-# Estas líneas están comentadas para no eliminarlas:
-# apt purge -y adwaita-icon-theme gtk2-engines gtk3-engines || true
+# Las siguientes líneas están comentadas para no eliminarlas:
+# apt purge -y adwaita-icon-theme gtk2-engines* gtk3-* || true
 
 # ============================================
 # 2. AUTOLIMPIEZA
@@ -124,14 +124,14 @@ apt install -y openbox rxvt-unicode
 apt install -y connman
 
 # Temas GTK (para aplicaciones como mgba-qt)
-apt install -y adwaita-icon-theme gtk2-engines gtk3-engines
+apt install -y adwaita-icon-theme gnome-themes-extra
 
 # ============================================
 # 4. CONFIGURAR OPENBOX (TERMINAL FIJA)
 # ============================================
 info "Configurando Openbox con terminal fija..."
 
-# Determinar usuario objetivo
+# Determinar usuario objetivo (el que ejecuta el script con sudo)
 TARGET_USER="${SUDO_USER:-$USER}"
 USER_HOME="/home/$TARGET_USER"
 
@@ -186,7 +186,7 @@ exec openbox-session
 EOF
 chmod +x "$USER_HOME/.xinitrc"
 
-# Auto-login en tty1
+# Auto-login en tty1 (iniciar X automáticamente al hacer login)
 cat >> "$USER_HOME/.bashrc" << 'EOF'
 
 # Iniciar X automáticamente en tty1
@@ -214,7 +214,7 @@ EOF
 chown -R "$TARGET_USER":"$TARGET_USER" "$USER_HOME/.config" "$USER_HOME/.xinitrc" "$USER_HOME/.bashrc"
 
 # ============================================
-# 5. CREAR SCRIPTS XONI (cambiados a xoniant)
+# 5. CREAR SCRIPTS XONI (prefijo xoni-)
 # ============================================
 info "Creando scripts XONI..."
 
@@ -354,7 +354,7 @@ echo "  - Openbox"
 echo "  - Terminal fija"
 echo "  - ALSA"
 echo "  - Connman"
-echo "  - Temas GTK (para apps como mgba-qt)"
+echo "  - Temas GTK (para apps gráficas)"
 echo "  - Scripts XONI"
 echo ""
 echo "NO HAY:"
