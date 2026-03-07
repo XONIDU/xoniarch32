@@ -9,7 +9,7 @@
 #   - ALSA para audio
 #   - Connman para WiFi
 #   - Scripts XONI (xoni-install, xoni-update, xoni-help, xoni-menu)
-#   - xonitube (reproductor de YouTube)
+#   - xonitube, xonigraf, xonichat, xonimail (desde GitHub)
 #   - Sin rastros de xoniarch
 
 set -euo pipefail
@@ -52,7 +52,7 @@ echo "  - Openbox con terminal fija"
 echo "  - ALSA para audio"
 echo "  - Connman para WiFi"
 echo "  - Scripts XONI (xoni-install, xoni-update, xoni-help, xoni-menu)"
-echo "  - xonitube (reproductor de YouTube)"
+echo "  - xonitube, xonigraf, xonichat, xonimail (desde GitHub)"
 echo ""
 read -p "¿Estás seguro? (escribe YES): " CONFIRM
 [ "$CONFIRM" != "YES" ] && error_exit "Operación cancelada."
@@ -88,10 +88,14 @@ info "Purgando documentación..."
 apt purge -y man-db manpages info || true
 
 # ============================================
-# 2. ELIMINAR SCRIPTS ANTIGUOS
+# 2. ELIMINAR RASTROS DE XONIARCH
 # ============================================
-info "Eliminando scripts antiguos (xoniarch-*)..."
+info "Eliminando rastros de xoniarch..."
 rm -f /usr/local/bin/xoniarch-* 2>/dev/null || true
+rm -f /usr/local/bin/xoniarch 2>/dev/null || true
+rm -f /usr/local/bin/xoniarch32 2>/dev/null || true
+rm -rf /opt/xoniarch 2>/dev/null || true
+rm -rf /opt/xoniarch32 2>/dev/null || true
 
 # ============================================
 # 3. AUTOLIMPIEZA
@@ -196,84 +200,188 @@ echo "  xoni-menu     : Menú interactivo"
 echo "  xoni-update   : Actualiza xoniant32 desde GitHub"
 echo "  xoni-install  : Instala herramientas XONI"
 echo "  sudo connmanctl : Configura la red WiFi"
-echo "  xonitube      : Buscador y reproductor de YouTube"
+echo "  xonitube      : Buscador de YouTube"
+echo "  xonigraf      : Graficador matemático"
+echo "  xonichat      : Chat con IA"
+echo "  xonimail      : Cliente de correo"
 echo "========================================"
 EOF
 
 chown -R "$TARGET_USER":"$TARGET_USER" "$USER_HOME/.config" "$USER_HOME/.xinitrc" "$USER_HOME/.bashrc"
 
 # ============================================
-# 6. INSTALAR XONITUBE
+# 6. CREAR DIRECTORIO PARA HERRAMIENTAS XONI
+# ============================================
+mkdir -p /opt/xoni
+chown -R "$TARGET_USER":"$TARGET_USER" /opt/xoni 2>/dev/null || true
+
+# ============================================
+# 7. INSTALAR XONITUBE DIRECTAMENTE
 # ============================================
 info "Instalando xonitube..."
-mkdir -p /usr/local/bin
-
-# Descargar xonitube desde el repositorio oficial
 if curl -sSL -o /tmp/xonitube.py https://raw.githubusercontent.com/XONIDU/xonitube/main/xonitube.py; then
     cp /tmp/xonitube.py /usr/local/bin/xonitube
     chmod +x /usr/local/bin/xonitube
     info "xonitube instalado correctamente."
 else
-    warn "No se pudo descargar xonitube. Puedes instalarlo después con 'xoni-install xonitube'."
+    warn "No se pudo descargar xonitube. Se instalará después con xoni-install."
 fi
 
 # ============================================
-# 7. CREAR SCRIPTS XONI
+# 8. INSTALAR XONIGRAF DIRECTAMENTE
 # ============================================
-info "Creando scripts XONI..."
+info "Instalando xonigraf..."
+if curl -sSL -o /tmp/xonigraf.py https://raw.githubusercontent.com/XONIDU/xonigraf/main/xonigraf.py; then
+    cp /tmp/xonigraf.py /usr/local/bin/xonigraf
+    chmod +x /usr/local/bin/xonigraf
+    info "xonigraf instalado correctamente."
+else
+    warn "No se pudo descargar xonigraf. Se instalará después con xoni-install."
+fi
+
+# ============================================
+# 9. INSTALAR XONICHAT DIRECTAMENTE
+# ============================================
+info "Instalando xonichat..."
+if curl -sSL -o /tmp/xonichat.py https://raw.githubusercontent.com/XONIDU/xonichat/main/xonichat.py; then
+    cp /tmp/xonichat.py /usr/local/bin/xonichat
+    chmod +x /usr/local/bin/xonichat
+    info "xonichat instalado correctamente."
+else
+    warn "No se pudo descargar xonichat. Se instalará después con xoni-install."
+fi
+
+# ============================================
+# 10. INSTALAR XONIMAIL DIRECTAMENTE
+# ============================================
+info "Instalando xonimail..."
+if curl -sSL -o /tmp/xonimail.py https://raw.githubusercontent.com/XONIDU/xonimail/main/xonimail.py; then
+    cp /tmp/xonimail.py /usr/local/bin/xonimail
+    chmod +x /usr/local/bin/xonimail
+    info "xonimail instalado correctamente."
+else
+    warn "No se pudo descargar xonimail. Se instalará después con xoni-install."
+fi
+
+# ============================================
+# 11. CREAR SCRIPTS XONI PRINCIPALES
+# ============================================
+info "Creando scripts XONI principales..."
 
 cat > /usr/local/bin/xoni-install << 'EOF'
 #!/bin/bash
+# xoni-install – Instalador de herramientas XONI desde GitHub
+# Autor: Darian Alberto Camacho Salas
+
 REPO_BASE="https://github.com/XONIDU"
 DIR="/opt/xoni"
 [ ! -d "$DIR" ] && mkdir -p "$DIR"
 cd "$DIR"
 TOOL="${1:-}"
 if [ -z "$TOOL" ]; then
-    read -p "Herramienta a instalar (ej: xonitube): " TOOL
+    echo "Herramientas disponibles: xonitube, xonigraf, xonichat, xonimail, xonicar, xoniclus, xoniconver, xonidate, xonidal, xonidip, xoniencript, xonihelp, xonilab, xoniclient, xoniserver, xoniterm, xonifs, xonigrep, xonisearch, xonicrypt, xonidecode, xonicron, xonisync"
+    read -p "Herramienta a instalar: " TOOL
 fi
 if [ -d "$TOOL" ]; then
-    cd "$TOOL" && git pull
+    cd "$TOOL" && git pull && cd ..
 else
     git clone "$REPO_BASE/$TOOL.git"
 fi
-find "$TOOL" -name "*.py" -o -name "*.sh" -exec chmod +x {} \;
-echo "[OK] $TOOL instalado"
+if [ -f "$TOOL/$TOOL.py" ]; then
+    cp "$TOOL/$TOOL.py" "/usr/local/bin/$TOOL"
+    chmod +x "/usr/local/bin/$TOOL"
+    echo "[OK] $TOOL instalado en /usr/local/bin/$TOOL"
+elif [ -f "$TOOL/$TOOL.sh" ]; then
+    cp "$TOOL/$TOOL.sh" "/usr/local/bin/$TOOL"
+    chmod +x "/usr/local/bin/$TOOL"
+    echo "[OK] $TOOL instalado en /usr/local/bin/$TOOL"
+else
+    echo "[AVISO] No se encontró un archivo principal, pero el repositorio se clonó en /opt/xoni/$TOOL"
+fi
 EOF
 
 cat > /usr/local/bin/xoni-update << 'EOF'
 #!/bin/bash
+# xoni-update – Actualiza xoniant32 y las herramientas XONI desde GitHub
+# Autor: Darian Alberto Camacho Salas
+
 REPO="https://github.com/XONIDU/xoniant32.git"
 DIR="/opt/xoniant32"
+
+echo "Actualizando xoniant32 desde GitHub..."
 if [ ! -d "$DIR" ]; then
     sudo git clone "$REPO" "$DIR"
 else
     cd "$DIR" && sudo git pull
 fi
-# Sincronizar scripts
-sudo cp -v "$DIR/scripts"/xoni-* /usr/local/bin/ 2>/dev/null || true
-# Eliminar scripts antiguos
+
+# Actualizar scripts principales si existen
+if [ -d "$DIR/scripts" ]; then
+    sudo cp -v "$DIR/scripts"/xoni-* /usr/local/bin/ 2>/dev/null || true
+fi
+
+# Eliminar cualquier rastro de xoniarch
 sudo rm -f /usr/local/bin/xoniarch-* 2>/dev/null || true
+sudo rm -f /usr/local/bin/xoniarch 2>/dev/null || true
+
+# Asegurar permisos
 sudo chmod +x /usr/local/bin/xoni-* 2>/dev/null || true
-echo "[OK] xoniant32 actualizado desde GitHub"
+
+# Actualizar herramientas instaladas en /opt/xoni
+if [ -d /opt/xoni ]; then
+    cd /opt/xoni
+    for tool in */; do
+        if [ -d "$tool" ]; then
+            echo "Actualizando ${tool%/}..."
+            cd "$tool" && git pull && cd ..
+        fi
+    done
+fi
+
+echo "[OK] xoniant32 actualizado correctamente"
 EOF
 
 cat > /usr/local/bin/xoni-help << 'EOF'
 #!/bin/bash
+# xoni-help – Muestra ayuda de xoniant32
+# Autor: Darian Alberto Camacho Salas
+
 cat << 'HELP'
 ========================================
    XONIANT32 - AYUDA
 ========================================
-COMANDOS:
-  xoni-install <herramienta>  : Instalar desde GitHub
-  xoni-update                 : Actualizar xoniant32
-  xoni-menu                   : Menú interactivo
-  sudo connmanctl             : Configurar WiFi
-  alsamixer                   : Ajustar volumen
-  htop                        : Monitor del sistema
-  xonitube                    : Buscador de YouTube
+COMANDOS PRINCIPALES:
+  xoni-help                    : Muestra esta ayuda
+  xoni-menu                    : Menú interactivo
+  xoni-update                   : Actualiza xoniant32 y herramientas
+  xoni-install <herramienta>   : Instala herramientas XONI desde GitHub
 
-ATAJOS:
+HERRAMIENTAS XONI DISPONIBLES:
+  xonitube    : Buscador y reproductor de YouTube
+  xonigraf    : Graficador matemático
+  xonichat    : Chat con IA (Gemini)
+  xonimail    : Cliente de correo desde terminal
+  xonicar     : Herramienta para vehículos
+  xoniclus    : Utilidades para clusters
+  xoniconver  : Conversor de formatos
+  xonidate    : Gestor de fechas
+  xonidal     : Utilidades varias
+  xonidip     : Herramienta DIP
+  xoniencript : Cifrado de archivos
+  xonihelp    : Ayuda adicional
+  xonilab     : Laboratorio
+  xoniclient  : Cliente de red
+  xoniserver  : Servidor
+  xoniterm    : Terminal mejorada
+  xonifs      : Sistema de archivos
+  xonigrep    : Buscador de texto
+  xonisearch  : Buscador general
+  xonicrypt   : Criptografía
+  xonidecode  : Decodificador
+  xonicron    : Gestor de tareas
+  xonisync    : Sincronizador
+
+ATAJOS DE TECLADO (en Openbox):
   Win + x   : Menú principal
   Win + t   : Nueva terminal
   Win + h   : Ayuda
@@ -284,11 +392,15 @@ El sistema arranca directamente en modo gráfico.
 La terminal principal es fija (no se puede cerrar).
 
 REPOSITORIO: https://github.com/XONIDU/xoniant32
+========================================
 HELP
 EOF
 
 cat > /usr/local/bin/xoni-menu << 'EOF'
 #!/bin/bash
+# xoni-menu – Menú interactivo de xoniant32
+# Autor: Darian Alberto Camacho Salas
+
 while true; do
     clear
     echo "========================================"
@@ -319,7 +431,7 @@ EOF
 chmod +x /usr/local/bin/xoni-*
 
 # ============================================
-# 8. ACTUALIZAR MOTD
+# 12. ACTUALIZAR MOTD
 # ============================================
 cat > /etc/motd << 'EOF'
 ========================================
@@ -332,6 +444,9 @@ Comandos útiles:
   xoni-install  : Instala herramientas XONI
   sudo connmanctl : Configura la red WiFi
   xonitube      : Buscador de YouTube
+  xonigraf      : Graficador matemático
+  xonichat      : Chat con IA
+  xonimail      : Cliente de correo
 
 El sistema arranca directamente en modo gráfico.
 La terminal principal es fija (no se puede cerrar).
@@ -341,7 +456,7 @@ Repositorio: https://github.com/XONIDU/xoniant32
 EOF
 
 # ============================================
-# 9. FINALIZACIÓN
+# 13. FINALIZACIÓN
 # ============================================
 echo "========================================"
 echo "   INSTALACIÓN COMPLETADA               "
@@ -354,7 +469,7 @@ echo "  - Openbox con terminal fija"
 echo "  - ALSA (audio)"
 echo "  - Connman (WiFi)"
 echo "  - Scripts XONI: xoni-install, xoni-update, xoni-help, xoni-menu"
-echo "  - xonitube (buscador de YouTube)"
+echo "  - xonitube, xonigraf, xonichat, xonimail"
 echo ""
 echo "No hay escritorio, barras, fondos ni gestores de display."
 echo "WiFi: sudo connmanctl (opción 3 del menú)"
