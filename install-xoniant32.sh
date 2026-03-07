@@ -1,13 +1,19 @@
 #!/bin/bash
-# xoniant32 – Instalador desde live USB de antiX
+# xoniant32 – Script de purga ULTRA minimalista
 # Autor: Darian Alberto Camacho Salas
 # Repositorio: https://github.com/XONIDU/xoniant32
 #
-# Este script debe ejecutarse desde el entorno live de antiX (32 bits).
-# Realiza la instalación completa en el disco seleccionado y aplica la personalización XONI.
+# Este script elimina TODO lo innecesario de una instalación antiX existente
+# y deja SOLO:
+#   - Openbox (ventanas mínimas)
+#   - Una terminal fija que ocupa toda la pantalla (rxvt-unicode)
+#   - Audio (ALSA)
+#   - Connman para WiFi (nativo de antiX)
+#   - Scripts XONI (xoni-install, xoni-update, xoni-help, xoni-menu)
+#   - NADA MÁS (ni tint2, ni feh, ni picom, ni escritorio, ni gestores de display)
 
 set -euo pipefail
-trap 'echo -e "${RED}[ERROR] Falló en la línea $LINENO${NC}" >&2' ERR
+trap 'echo -e "\033[0;31m[ERROR] Falló en la línea $LINENO\033[0m" >&2' ERR
 
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
@@ -18,255 +24,110 @@ error_exit() { echo -e "${RED}[ERROR] $1${NC}" >&2; exit 1; }
 info()  { echo -e "${GREEN}[INFO] $1${NC}"; }
 warn()  { echo -e "${YELLOW}[AVISO] $1${NC}"; }
 
-# ============================================
-# 1. Verificar entorno live de antiX
-# ============================================
+# Verificar root
+if [ "$EUID" -ne 0 ]; then 
+    error_exit "Este script debe ejecutarse como root (sudo)."
+fi
+
+# Verificar antiX
+if [ ! -f /etc/antix-version ]; then
+    error_exit "Este script debe ejecutarse en antiX Linux."
+fi
+
 clear
 echo "========================================"
-echo "   XONIANT32 - INSTALADOR DESDE LIVE   "
-echo "   by Darian Alberto Camacho Salas      "
+echo "   XONIANT32 - PURGA ULTRA MINIMALISTA "
 echo "========================================"
+echo "ADVERTENCIA: Este script ELIMINARÁ:"
+echo "  - TODOS los escritorios completos"
+echo "  - TODAS las aplicaciones gráficas"
+echo "  - TODOS los gestores de display"
+echo "  - Barras de tareas, fondos, compositores"
+echo "  - NetworkManager (para usar connman)"
 echo ""
-
-if [ ! -f /etc/antix-version ]; then
-    error_exit "Este script debe ejecutarse desde el live USB de antiX Linux."
-fi
-
-# ============================================
-# 2. Preguntar configuración regional
-# ============================================
-echo "========================================"
-echo "   CONFIGURACIÓN REGIONAL               "
-echo "========================================"
+echo "SOLO DEJARÁ:"
+echo "  - Openbox (mínimo)"
+echo "  - Terminal fija (rxvt-unicode)"
+echo "  - ALSA para audio"
+echo "  - Connman para WiFi"
+echo "  - Scripts XONI"
 echo ""
-
-read -p "Región (ej: America) [America]: " ZONE_REGION
-ZONE_REGION=${ZONE_REGION:-America}
-
-read -p "Ciudad (ej: Mexico_City) [Mexico_City]: " ZONE_CITY
-ZONE_CITY=${ZONE_CITY:-Mexico_City}
-TIMEZONE="$ZONE_REGION/$ZONE_CITY"
-
-read -p "Idioma del sistema (ej: es_MX.UTF-8) [es_MX.UTF-8]: " LOCALE
-LOCALE=${LOCALE:-es_MX.UTF-8}
-
-read -p "Distribución de teclado (ej: es) [es]: " KEYMAP
-KEYMAP=${KEYMAP:-es}
-
-echo ""
-
-# ============================================
-# 3. Preguntar credenciales
-# ============================================
-echo "========================================"
-echo "   CONFIGURACIÓN DE USUARIO             "
-echo "========================================"
-echo ""
-
-read -p "Nombre del equipo (hostname) [xoniant32]: " HOSTNAME
-HOSTNAME=${HOSTNAME:-xoniant32}
-
-read -p "Nombre de usuario [xoni]: " USERNAME
-USERNAME=${USERNAME:-xoni}
-
-while true; do
-    read -s -p "Contraseña para $USERNAME: " PASSWORD1
-    echo
-    read -s -p "Repite la contraseña: " PASSWORD2
-    echo
-    if [ "$PASSWORD1" = "$PASSWORD2" ] && [ -n "$PASSWORD1" ]; then
-        PASSWORD="$PASSWORD1"
-        break
-    else
-        echo "Las contraseñas no coinciden o están vacías. Intenta de nuevo."
-    fi
-done
-echo ""
-
-# ============================================
-# 4. Seleccionar disco de instalación
-# ============================================
-echo "========================================"
-echo "   SELECCIÓN DE DISCO                   "
-echo "========================================"
-echo ""
-
-lsblk -d -o NAME,SIZE,MODEL,TYPE | grep -E "disk|NAME"
-echo ""
-read -p "¿En qué disco instalar? (ej: sda): " DISK
-[ -z "$DISK" ] && error_exit "No se seleccionó ningún disco."
-[ ! -b "/dev/$DISK" ] && error_exit "El disco /dev/$DISK no existe."
-
-# Desmontar cualquier partición del disco
-for part in $(lsblk -ln -o NAME "/dev/$DISK" | grep -v "^$DISK$"); do
-    if mountpoint -q "/dev/$part"; then
-        sudo umount "/dev/$part" || true
-    fi
-done
-
-echo ""
-echo "¡ATENCION! Se borrarán TODOS los datos en /dev/$DISK"
-lsblk "/dev/$DISK"
 read -p "¿Estás seguro? (escribe YES): " CONFIRM
-[ "$CONFIRM" != "YES" ] && error_exit "Instalación cancelada."
+[ "$CONFIRM" != "YES" ] && error_exit "Operación cancelada."
 
 # ============================================
-# 5. Particionado automático
+# 1. PURGA MASIVA
 # ============================================
-echo ""
-echo "========================================"
-echo "   PARTICIONADO                         "
-echo "========================================"
-echo ""
+info "Purgando escritorios completos..."
+apt purge -y xfce4* lxde* lxqt* mate-* cinnamon* gnome-* kde-* || true
 
-read -p "¿Crear partición swap? (s/n): " SWAP_OPT
-if [[ "$SWAP_OPT" =~ ^[Ss]$ ]]; then
-    read -p "Tamaño de swap en GB (ej: 1): " SWAP_SIZE
-    SWAP_SIZE=${SWAP_SIZE:-1}
-    info "Particionando con swap de ${SWAP_SIZE}G..."
-    sudo parted "/dev/$DISK" mklabel msdos
-    sudo parted "/dev/$DISK" mkpart primary linux-swap 1MiB "${SWAP_SIZE}GiB"
-    sudo parted "/dev/$DISK" mkpart primary ext4 "${SWAP_SIZE}GiB" 100%
-    sudo parted "/dev/$DISK" set 2 boot on
-    ROOT_PART="${DISK}2"
-    SWAP_PART="${DISK}1"
-else
-    info "Particionando sin swap..."
-    sudo parted "/dev/$DISK" mklabel msdos
-    sudo parted "/dev/$DISK" mkpart primary ext4 1MiB 100%
-    sudo parted "/dev/$DISK" set 1 boot on
-    ROOT_PART="${DISK}1"
-    SWAP_PART=""
-fi
+info "Purgando gestores de ventanas adicionales..."
+apt purge -y fluxbox icewm jwm dwm awesome i3* || true
 
-# Forzar recarga de la tabla de particiones
-sudo partprobe "/dev/$DISK" || sudo partx -d "/dev/$DISK" || true
+info "Purgando aplicaciones gráficas..."
+apt purge -y firefox* chromium* seamonkey* libreoffice* abiword gnumeric || true
+apt purge -y vlc smplayer audacious parole gimp inkscape blender shotwell || true
+apt purge -y thunderbird* claws-mail* sylpheed* || true
+apt purge -y gnome-games* aisleriot solitaire || true
 
-info "Formateando particiones..."
-sudo mkfs.ext4 -F "/dev/$ROOT_PART"
-[ -n "$SWAP_PART" ] && sudo mkswap "/dev/$SWAP_PART"
+info "Purgando gestores de display..."
+apt purge -y lightdm sddm lxdm slim gdm3 xdm || true
 
-info "Montando sistema en /mnt..."
-sudo mount "/dev/$ROOT_PART" /mnt
-[ -n "$SWAP_PART" ] && sudo swapon "/dev/$SWAP_PART" 2>/dev/null || true
+info "Purgando NetworkManager y nmtui..."
+apt purge -y network-manager* nmtui || true
+
+info "Purgando herramientas de escritorio (tint2, feh, picom, nitrogen)..."
+apt purge -y tint2 feh picom nitrogen || true
+
+info "Purgando herramientas de desarrollo (opcional)..."
+apt purge -y build-essential gcc g++ make cmake || true
+
+info "Purgando documentación..."
+apt purge -y man-db manpages info || true
 
 # ============================================
-# 6. Copiar sistema live al destino
+# 2. AUTOLIMPIEZA
 # ============================================
-info "Copiando sistema live al disco de destino (puede tardar varios minutos)..."
-sudo rsync -aAXv /* /mnt --exclude={/dev/*,/proc/*,/sys/*,/tmp/*,/run/*,/mnt/*,/media/*,/lost+found,/home/*/.gvfs} || error_exit "Falló la copia del sistema."
+info "Eliminando dependencias no usadas..."
+apt autoremove --purge -y
 
-# ============================================
-# 7. Preparar el sistema para el chroot
-# ============================================
-info "Montando sistemas virtuales para el chroot..."
-sudo mount --bind /dev /mnt/dev
-sudo mount --bind /proc /mnt/proc
-sudo mount --bind /sys /mnt/sys
+info "Limpiando caché..."
+apt clean
+apt autoclean
 
 # ============================================
-# 8. Configurar sistema base dentro del chroot
+# 3. INSTALAR PAQUETES MÍNIMOS
 # ============================================
-info "Configurando el sistema dentro del chroot..."
+info "Instalando paquetes mínimos..."
 
-sudo tee /mnt/tmp/chroot-config.sh > /dev/null << 'CONFIG'
-#!/bin/bash
-# Zona horaria
-ln -sf /usr/share/zoneinfo/__TIMEZONE__ /etc/localtime
-hwclock --systohc
+# Base
+apt install -y git curl wget htop nano
 
-# Localización
-echo "__LOCALE__ UTF-8" >> /etc/locale.gen
-locale-gen
-echo "LANG=__LOCALE__" > /etc/locale.conf
-update-locale LANG=__LOCALE__
+# Audio (ALSA puro)
+apt install -y alsa-utils
 
-# Teclado
-echo "KEYMAP=__KEYMAP__" > /etc/vconsole.conf
-echo "XKBLAYOUT=__KEYMAP__" > /etc/default/keyboard
-dpkg-reconfigure keyboard-configuration -f noninteractive
+# Xorg mínimo
+apt install -y xorg xserver-xorg-core xserver-xorg-input-all xserver-xorg-video-fbdev
 
-# Hostname
-echo "__HOSTNAME__" > /etc/hostname
-cat > /etc/hosts << HOSTS
-127.0.0.1   localhost
-::1         localhost
-127.0.1.1   __HOSTNAME__.localdomain __HOSTNAME__
-HOSTS
+# Openbox y terminal (solo lo necesario)
+apt install -y openbox rxvt-unicode
 
-# Usuario y sudo
-useradd -m -G sudo -s /bin/bash __USERNAME__
-echo "__USERNAME__:__PASSWORD__" | chpasswd
-echo "root:__PASSWORD__" | chpasswd
-sed -i 's/^# %sudo ALL=(ALL:ALL) ALL/%sudo ALL=(ALL:ALL) ALL/' /etc/sudoers
-
-# Actualizar repositorios e instalar paquetes
-apt update
-apt install -y git curl wget htop neofetch build-essential
-apt install -y xorg openbox obconf tint2 feh picom rxvt-unicode pcmanfm
-apt install -y alsa-utils pulseaudio pavucontrol
-apt install -y lightdm lightdm-gtk-greeter sddm lxdm slim
-apt install -y network-manager nmtui
-apt install -y mpv ffmpeg yt-dlp
-
-# Configurar auto-login en lightdm (si está instalado)
-if [ -f /etc/lightdm/lightdm.conf ]; then
-    mkdir -p /etc/lightdm/lightdm.conf.d
-    cat > /etc/lightdm/lightdm.conf.d/autologin.conf << LIGHTDM
-[Seat:*]
-autologin-user=__USERNAME__
-autologin-session=openbox
-LIGHTDM
-fi
-
-# Configurar SDDM (si está instalado)
-if [ -d /etc/sddm.conf.d ]; then
-    mkdir -p /etc/sddm.conf.d
-    cat > /etc/sddm.conf.d/autologin.conf << SDDM
-[Autologin]
-User=__USERNAME__
-Session=openbox.desktop
-SDDM
-fi
-
-# Configurar LXDM (si está instalado)
-if [ -f /etc/lxdm/lxdm.conf ]; then
-    sed -i "s/^# autologin=.*/autologin=__USERNAME__/" /etc/lxdm/lxdm.conf
-fi
-
-# Configurar SLiM (si está instalado)
-if [ -f /etc/slim.conf ]; then
-    echo "default_user __USERNAME__" >> /etc/slim.conf
-    echo "auto_login yes" >> /etc/slim.conf
-fi
-
-# Habilitar el primer gestor de display encontrado
-DM_SERVICE=""
-for svc in lightdm sddm lxdm slim; do
-    if systemctl list-unit-files | grep -q "$svc.service"; then
-        DM_SERVICE="$svc"
-        systemctl enable "$svc"
-        echo "Gestor de display habilitado: $svc"
-        break
-    fi
-done
-
-if [ -z "$DM_SERVICE" ]; then
-    echo "No se instaló ningún gestor de display. Se usará startx manual."
-fi
-
-# Habilitar NetworkManager (servicio runit en antiX)
-if [ -d /etc/sv/networkmanager ]; then
-    ln -s /etc/sv/networkmanager /etc/service/networkmanager
-else
-    echo "NetworkManager no está configurado para runit."
-fi
+# Connman (WiFi nativo)
+apt install -y connman
 
 # ============================================
-# Configurar Openbox con terminal fija
+# 4. CONFIGURAR OPENBOX (TERMINAL FIJA)
 # ============================================
-mkdir -p /home/__USERNAME__/.config/openbox
-cat > /home/__USERNAME__/.config/openbox/rc.xml << 'EOF'
+info "Configurando Openbox con terminal fija..."
+
+# Determinar usuario objetivo (el que ejecuta el script con sudo)
+TARGET_USER="${SUDO_USER:-$USER}"
+USER_HOME="/home/$TARGET_USER"
+
+mkdir -p "$USER_HOME/.config/openbox"
+
+# Configuración de Openbox - TERMINAL FIJA sin decoraciones
+cat > "$USER_HOME/.config/openbox/rc.xml" << 'EOF'
 <?xml version="1.0" encoding="UTF-8"?>
 <openbox_config>
   <applications>
@@ -289,13 +150,14 @@ cat > /home/__USERNAME__/.config/openbox/rc.xml << 'EOF'
 </openbox_config>
 EOF
 
-cat > /home/__USERNAME__/.config/openbox/menu.xml << 'EOF'
+# Menú minimalista
+cat > "$USER_HOME/.config/openbox/menu.xml" << 'EOF'
 <?xml version="1.0" encoding="utf-8"?>
 <openbox_menu>
   <menu id="root-menu" label="Xoniant32">
     <item label="Nueva terminal"><action name="Execute"><command>urxvt</command></action></item>
     <item label="Instalar herramienta XONI"><action name="Execute"><command>urxvt -e xoni-install</command></action></item>
-    <item label="Configurar red"><action name="Execute"><command>urxvt -e nmtui</command></action></item>
+    <item label="Configurar red (connman)"><action name="Execute"><command>urxvt -e sudo connmanctl</command></action></item>
     <item label="Monitor sistema"><action name="Execute"><command>urxvt -e htop</command></action></item>
     <item label="Actualizar xoniant32"><action name="Execute"><command>urxvt -e xoni-update</command></action></item>
     <item label="Ayuda"><action name="Execute"><command>urxvt -e xoni-help</command></action></item>
@@ -304,26 +166,80 @@ cat > /home/__USERNAME__/.config/openbox/menu.xml << 'EOF'
 </openbox_menu>
 EOF
 
-cat > /home/__USERNAME__/.config/openbox/autostart << 'EOF'
+# Autostart - SOLO la terminal principal (sin nada más)
+cat > "$USER_HOME/.config/openbox/autostart" << 'EOF'
 # TERMINAL PRINCIPAL (NO SE PUEDE CERRAR)
 urxvt -title "principal" &
-feh --bg-scale /usr/share/backgrounds/default.jpg &
-picom -b &
-tint2 &
 EOF
 
-cat > /home/__USERNAME__/.xinitrc << 'EOF'
+# .xinitrc
+cat > "$USER_HOME/.xinitrc" << 'EOF'
 #!/bin/sh
 exec openbox-session
 EOF
-chmod +x /home/__USERNAME__/.xinitrc
+chmod +x "$USER_HOME/.xinitrc"
 
-chown -R __USERNAME__:__USERNAME__ /home/__USERNAME__/.config
-chown __USERNAME__:__USERNAME__ /home/__USERNAME__/.xinitrc
+# Auto-login en tty1 (iniciar X automáticamente al hacer login)
+cat >> "$USER_HOME/.bashrc" << 'EOF'
+
+# Iniciar X automáticamente en tty1
+if [ -z "$DISPLAY" ] && [ "$(tty)" = "/dev/tty1" ]; then
+    startx
+fi
+EOF
+
+chown -R "$TARGET_USER":"$TARGET_USER" "$USER_HOME/.config" "$USER_HOME/.xinitrc" "$USER_HOME/.bashrc"
 
 # ============================================
-# Crear scripts XONI
+# 5. CONFIGURAR CONNMAN (WiFi)
 # ============================================
+info "Configurando Connman..."
+
+# Habilitar connman en runit (sistema de inicio de antiX)
+if [ -d /etc/sv/connman ]; then
+    ln -sf /etc/sv/connman /etc/service/connman
+else
+    # Crear servicio runit si no existe
+    mkdir -p /etc/sv/connman
+    cat > /etc/sv/connman/run << 'EOF'
+#!/bin/bash
+exec chpst -u root /usr/sbin/connmand -n
+EOF
+    chmod +x /etc/sv/connman/run
+    ln -s /etc/sv/connman /etc/service/connman
+fi
+
+# Archivo de ayuda para WiFi en el home del usuario
+cat > "$USER_HOME/.wifi-help" << 'EOF'
+========================================
+   CONECTARSE A WIFI CON CONNMAN
+========================================
+Comando: sudo connmanctl
+
+Dentro de connmanctl:
+  agent on                  # Activar agente
+  enable wifi               # Habilitar WiFi
+  scan wifi                 # Escanear redes
+  services                  # Listar redes
+  connect wifi_nombre       # Conectar (usa TAB para autocompletar)
+  quit                      # Salir
+
+Ejemplo:
+  $ sudo connmanctl
+  connmanctl> agent on
+  connmanctl> enable wifi
+  connmanctl> scan wifi
+  connmanctl> services
+  connmanctl> connect wifi_MiRed_managed_psk
+  connmanctl> quit
+EOF
+chown "$TARGET_USER":"$TARGET_USER" "$USER_HOME/.wifi-help"
+
+# ============================================
+# 6. CREAR SCRIPTS XONI
+# ============================================
+info "Creando scripts XONI..."
+
 mkdir -p /usr/local/bin
 
 cat > /usr/local/bin/xoni-install << 'EOF'
@@ -369,7 +285,9 @@ COMANDOS:
   xoni-install <herramienta>  : Instalar desde GitHub
   xoni-update                 : Actualizar xoniant32
   xoni-menu                   : Menú interactivo
-  nmtui                       : Configurar red
+  sudo connmanctl             : Configurar WiFi
+  alsamixer                   : Ajustar volumen
+  speaker-test                : Probar audio
   htop                        : Monitor del sistema
 
 ATAJOS:
@@ -391,11 +309,11 @@ cat > /usr/local/bin/xoni-menu << 'EOF'
 while true; do
     clear
     echo "========================================"
-    echo "      XONIANT32 - MENU PRINCIPAL"
+    echo "      XONIANT32 - MENÚ PRINCIPAL"
     echo "========================================"
     echo "1) Nueva terminal"
     echo "2) Instalar herramienta XONI"
-    echo "3) Configurar red (nmtui)"
+    echo "3) Configurar red (connman)"
     echo "4) Monitor del sistema (htop)"
     echo "5) Actualizar xoniant32"
     echo "6) Ayuda"
@@ -405,7 +323,7 @@ while true; do
     case $opt in
         1) urxvt ;;
         2) urxvt -e xoni-install ; read -p "Presiona Enter..." ;;
-        3) urxvt -e nmtui ;;
+        3) urxvt -e sudo connmanctl ;;
         4) urxvt -e htop ;;
         5) urxvt -e xoni-update ; read -p "Presiona Enter..." ;;
         6) xoni-help ; read -p "Presiona Enter..." ;;
@@ -415,23 +333,10 @@ while true; do
 done
 EOF
 
-chmod +x /usr/local/bin/*
+chmod +x /usr/local/bin/xoni-*
 
 # ============================================
-# Configurar .bashrc para el usuario
-# ============================================
-cat >> /home/__USERNAME__/.bashrc << 'BASHRC'
-alias ll='ls -la'
-alias la='ls -A'
-alias update='xoni-update'
-alias menu='xoni-menu'
-alias help='xoni-help'
-PS1='\[\e[1;32m\][\u@\h \W]\$ \[\e[0m\]'
-BASHRC
-chown __USERNAME__:__USERNAME__ /home/__USERNAME__/.bashrc
-
-# ============================================
-# Mensaje de bienvenida (motd)
+# 7. ACTUALIZAR MENSAJE DE BIENVENIDA (MOTD)
 # ============================================
 cat > /etc/motd << 'EOF'
 ========================================
@@ -442,7 +347,7 @@ Comandos útiles:
   xoni-menu     : Menú interactivo
   xoni-update   : Actualiza xoniant32 desde GitHub
   xoni-install  : Instala herramientas XONI
-  nmtui         : Configura la red
+  sudo connmanctl : Configura la red WiFi
 
 El sistema arranca directamente en modo gráfico.
 La terminal principal es fija (no se puede cerrar).
@@ -452,80 +357,31 @@ Repositorio: https://github.com/XONIDU/xoniant32
 EOF
 
 # ============================================
-# Generar fstab
+# 8. FINALIZACIÓN
 # ============================================
-cat > /etc/fstab << FSTAB
-# /etc/fstab: información del sistema de archivos
-# <file system> <mount point>   <type>  <options>       <dump>  <pass>
-UUID=$(blkid -s UUID -o value "/dev/__ROOT_PART__") / ext4 defaults 0 1
-EOF
-
-[ -n "__SWAP_PART__" ] && echo "UUID=$(blkid -s UUID -o value "/dev/__SWAP_PART__") none swap sw 0 0" >> /etc/fstab
-
-CONFIG
-
-# Reemplazar marcadores
-sed -i "s|__TIMEZONE__|$TIMEZONE|g" /mnt/tmp/chroot-config.sh
-sed -i "s|__LOCALE__|$LOCALE|g" /mnt/tmp/chroot-config.sh
-sed -i "s|__KEYMAP__|$KEYMAP|g" /mnt/tmp/chroot-config.sh
-sed -i "s|__HOSTNAME__|$HOSTNAME|g" /mnt/tmp/chroot-config.sh
-sed -i "s|__USERNAME__|$USERNAME|g" /mnt/tmp/chroot-config.sh
-sed -i "s|__PASSWORD__|$PASSWORD|g" /mnt/tmp/chroot-config.sh
-sed -i "s|__ROOT_PART__|$ROOT_PART|g" /mnt/tmp/chroot-config.sh
-sed -i "s|__SWAP_PART__|$SWAP_PART|g" /mnt/tmp/chroot-config.sh
-
-sudo chmod +x /mnt/tmp/chroot-config.sh
-sudo chroot /mnt /tmp/chroot-config.sh
-
-# ============================================
-# 9. Instalar GRUB (usando UUID para mayor compatibilidad)
-# ============================================
-info "Instalando GRUB..."
-sudo chroot /mnt grub-install --target=i386-pc "/dev/$DISK"
-sudo chroot /mnt update-grub
-
-# ============================================
-# 10. Preguntar por creación de ISO personalizada
-# ============================================
-echo ""
-info "¿Quieres crear una ISO personalizada de xoniant32?"
-echo "Esto usará la herramienta remaster-live de antiX"
-read -p "¿Crear ISO? (s/n): " CREATE_ISO
-
-if [[ "$CREATE_ISO" =~ ^[Ss]$ ]]; then
-    info "Preparando remasterización..."
-    echo ""
-    echo "Pasos a seguir:"
-    echo "1. El script remaster-live se ejecutará automáticamente"
-    echo "2. Guardará tu sistema personalizado como una nueva ISO"
-    echo ""
-    read -p "Presiona Enter para continuar..."
-    
-    sudo chroot /mnt remaster-live
-fi
-
-# ============================================
-# 11. Limpieza y desmontaje
-# ============================================
-info "Desmontando sistemas..."
-sudo umount /mnt/dev
-sudo umount /mnt/proc
-sudo umount /mnt/sys
-sudo umount /mnt
-[ -n "$SWAP_PART" ] && sudo swapoff "/dev/$SWAP_PART" 2>/dev/null || true
-
 echo "========================================"
-echo "   INSTALACIÓN COMPLETADA               "
+echo "   PURGA COMPLETADA                     "
 echo "========================================"
 echo ""
-echo "El sistema ARRANCARÁ DIRECTAMENTE EN MODO GRÁFICO"
-echo "Terminal principal FIJA (no se puede cerrar)"
+echo "antiX ha sido transformado en xoniant32"
 echo ""
-echo "Reinicia con: sudo reboot"
+echo "SOLO QUEDA:"
+echo "  - Openbox (mínimo)"
+echo "  - Terminal fija (rxvt-unicode)"
+echo "  - ALSA para audio"
+echo "  - Connman para WiFi"
+echo "  - Scripts XONI"
 echo ""
-echo "Usuario: $USERNAME | Contraseña: la que elegiste"
-echo "Root:    root     | Contraseña: la misma"
+echo "NO HAY:"
+echo "  - Escritorios"
+echo "  - Barras de tareas"
+echo "  - Fondos de pantalla"
+echo "  - Gestores de display"
 echo ""
-echo "Múltiples gestores instalados: lightdm, sddm, lxdm, slim"
-echo "Si uno falla, el siguiente intentará iniciar"
+echo "WiFi: cat ~/.wifi-help"
+echo ""
+echo "Reinicia el sistema para aplicar los cambios."
+echo ""
+echo "Usuario: $TARGET_USER (contraseña sin cambios)"
+echo ""
 echo "¡Disfruta xoniant32!"
