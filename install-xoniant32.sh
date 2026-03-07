@@ -1,12 +1,13 @@
 #!/bin/bash
-# install-xoniant32.sh – Terminal gráfica fija (sin escritorio)
+# install-xoniant32.sh – Terminal gráfica fija (herramientas en home)
 # Autor: Darian Alberto Camacho Salas
 # Repositorio: https://github.com/XONIDU/xoniant32
 #
-# Este script ELIMINA ESCRITORIOS Y GESTORES DE DISPLAY,
+# Este script elimina escritorios y gestores de display,
 # pero CONSERVA TODAS LAS DEPENDENCIAS GRÁFICAS.
 # El sistema ARRANCA DIRECTAMENTE en una terminal maximizada
 # que NO SE PUEDE CERRAR.
+# Las herramientas XONI se instalan directamente en ~/ (ej: ~/xonitube)
 
 set -euo pipefail
 trap 'echo -e "\033[0;31m[ERROR] Falló en la línea $LINENO\033[0m" >&2' ERR
@@ -51,13 +52,13 @@ echo "  - ALSA para audio"
 echo "  - Connman para WiFi (configurado)"
 echo "  - mpv + yt-dlp (para xonitube)"
 echo "  - Scripts XONI (xoni-install, xoni-update, xoni-help, xoni-menu)"
-echo "  - Las herramientas XONI se instalarán en ~/xoni/"
+echo "  - Las herramientas XONI se instalarán DIRECTAMENTE en ~/ (ej: ~/xonitube)"
 echo ""
 read -p "¿Estás seguro? (escribe YES): " CONFIRM
 [ "$CONFIRM" != "YES" ] && error_exit "Operación cancelada."
 
 # ============================================
-# 1. PURGA DE ESCRITORIOS (SIN TOCAR DEPENDENCIAS)
+# 1. PURGA DE ESCRITORIOS
 # ============================================
 info "Purgando escritorios completos..."
 apt purge -y xfce4* lxde* lxqt* mate-* cinnamon* gnome-* kde-* || true
@@ -97,7 +98,7 @@ rm -rf /opt/xoniarch 2>/dev/null || true
 rm -rf /opt/xoniarch32 2>/dev/null || true
 
 # ============================================
-# 3. AUTOLIMPIEZA (SOLO DEPENDENCIAS NO USADAS)
+# 3. AUTOLIMPIEZA
 # ============================================
 info "Eliminando dependencias no usadas..."
 apt autoremove --purge -y
@@ -124,11 +125,11 @@ apt install -y mpv yt-dlp ffmpeg
 # Firmware WiFi
 apt install -y firmware-atheros firmware-iwlwifi firmware-realtek || warn "Algún firmware WiFi no se pudo instalar."
 
-# Temas GTK mínimos (para que las apps gráficas no se vean horribles)
+# Temas GTK mínimos
 apt install -y --fix-missing adwaita-icon-theme || warn "Temas GTK opcionales no instalados."
 
 # ============================================
-# 5. CONFIGURAR CONNMAN PARA RED ESTABLE
+# 5. CONFIGURAR CONNMAN
 # ============================================
 info "Configurando connman para WiFi estable..."
 mkdir -p /etc/connman
@@ -144,7 +145,7 @@ EOF
 systemctl restart connman || sv restart connman || true
 
 # ============================================
-# 6. CONFIGURAR MPV PARA VIDEO
+# 6. CONFIGURAR MPV
 # ============================================
 info "Configurando mpv..."
 mkdir -p /etc/mpv
@@ -234,7 +235,7 @@ ExecStart=
 ExecStart=-/sbin/agetty --autologin $TARGET_USER --noclear %I 38400 linux
 EOF
 
-# Iniciar X automáticamente en .bashrc (solo en tty1)
+# Iniciar X automáticamente en .bashrc
 cat >> "$USER_HOME/.bashrc" << 'EOF'
 
 # Iniciar X automáticamente en tty1
@@ -244,7 +245,7 @@ if [ -z "$DISPLAY" ] && [ "$(tty)" = "/dev/tty1" ]; then
 fi
 EOF
 
-# Mensaje de bienvenida (se muestra después de iniciar X)
+# Mensaje de bienvenida
 cat >> "$USER_HOME/.bashrc" << 'EOF'
 
 # Mensaje de bienvenida
@@ -254,8 +255,8 @@ echo "========================================"
 echo "Comandos útiles:"
 echo "  xoni-help     : Muestra esta ayuda"
 echo "  xoni-menu     : Menú interactivo"
-echo "  xoni-update   : Actualiza xoniant32 y herramientas en ~/xoni/"
-echo "  xoni-install  : Instala herramientas XONI (ej: xoni-install xonitube)"
+echo "  xoni-update   : Actualiza xoniant32"
+echo "  xoni-install  : Instala herramientas XONI directamente en ~/"
 echo "  sudo connmanctl : Configura la red WiFi"
 echo "========================================"
 EOF
@@ -263,23 +264,21 @@ EOF
 chown -R "$TARGET_USER":"$TARGET_USER" "$USER_HOME/.config" "$USER_HOME/.xinitrc" "$USER_HOME/.bashrc"
 
 # ============================================
-# 9. CREAR SCRIPTS XONI
+# 9. CREAR SCRIPTS XONI (herramientas en home)
 # ============================================
-info "Creando scripts XONI..."
+info "Creando scripts XONI (herramientas directamente en ~/)..."
 
 cat > /usr/local/bin/xoni-install << 'EOF'
 #!/bin/bash
-# xoni-install – Instalador de herramientas XONI en ~/xoni/
+# xoni-install – Instalador de herramientas XONI directamente en ~/
 # Autor: Darian Alberto Camacho Salas
 
 REPO_BASE="https://github.com/XONIDU"
-XONI_DIR="$HOME/xoni"
-mkdir -p "$XONI_DIR"
-cd "$XONI_DIR"
+cd "$HOME"
 
 if [ -n "$1" ]; then
     TOOL="$1"
-    echo "Instalando $TOOL desde $REPO_BASE/$TOOL.git en $XONI_DIR/$TOOL ..."
+    echo "Instalando $TOOL desde $REPO_BASE/$TOOL.git en ~/$TOOL ..."
     
     if [ -d "$TOOL" ]; then
         echo "Actualizando $TOOL existente..."
@@ -288,22 +287,22 @@ if [ -n "$1" ]; then
         git clone "$REPO_BASE/$TOOL.git"
     fi
     
-    # Buscar el archivo principal
+    # Buscar el archivo principal y crear enlace simbólico en /usr/local/bin
     if [ -f "$TOOL/start.py" ]; then
-        echo "Se necesita sudo para copiar el script a /usr/local/bin/"
-        sudo cp "$TOOL/start.py" "/usr/local/bin/$TOOL"
+        echo "Creando enlace simbólico en /usr/local/bin/$TOOL (necesita sudo)"
+        sudo ln -sf "$HOME/$TOOL/start.py" "/usr/local/bin/$TOOL"
         sudo chmod +x "/usr/local/bin/$TOOL"
-        echo "[OK] $TOOL instalado en /usr/local/bin/$TOOL"
+        echo "[OK] $TOOL disponible como comando global (enlace a ~/$TOOL/start.py)"
     elif [ -f "$TOOL/$TOOL.py" ]; then
-        sudo cp "$TOOL/$TOOL.py" "/usr/local/bin/$TOOL"
+        sudo ln -sf "$HOME/$TOOL/$TOOL.py" "/usr/local/bin/$TOOL"
         sudo chmod +x "/usr/local/bin/$TOOL"
-        echo "[OK] $TOOL instalado en /usr/local/bin/$TOOL"
+        echo "[OK] $TOOL disponible como comando global (enlace a ~/$TOOL/$TOOL.py)"
     elif [ -f "$TOOL/$TOOL.sh" ]; then
-        sudo cp "$TOOL/$TOOL.sh" "/usr/local/bin/$TOOL"
+        sudo ln -sf "$HOME/$TOOL/$TOOL.sh" "/usr/local/bin/$TOOL"
         sudo chmod +x "/usr/local/bin/$TOOL"
-        echo "[OK] $TOOL instalado en /usr/local/bin/$TOOL"
+        echo "[OK] $TOOL disponible como comando global (enlace a ~/$TOOL/$TOOL.sh)"
     else
-        echo "[AVISO] No se encontró archivo principal, pero el repositorio está en $XONI_DIR/$TOOL"
+        echo "[AVISO] No se encontró archivo principal, pero el repositorio está en ~/$TOOL"
     fi
 
 else
@@ -321,8 +320,9 @@ EOF
 
 cat > /usr/local/bin/xoni-update << 'EOF'
 #!/bin/bash
-# xoni-update – Actualiza xoniant32 y herramientas
+# xoni-update – Actualiza xoniant32 y las herramientas XONI
 
+# Actualizar scripts del sistema
 REPO="https://github.com/XONIDU/xoniant32.git"
 DIR="/opt/xoniant32"
 echo "Actualizando scripts de xoniant32..."
@@ -339,19 +339,17 @@ fi
 sudo rm -f /usr/local/bin/xoniarch-* 2>/dev/null || true
 sudo chmod +x /usr/local/bin/xoni-* 2>/dev/null || true
 
-# Actualizar herramientas en ~/xoni/
-XONI_DIR="$HOME/xoni"
-if [ -d "$XONI_DIR" ]; then
-    echo ""
-    echo "Actualizando herramientas en $XONI_DIR ..."
-    cd "$XONI_DIR"
-    for tool in */; do
-        if [ -d "$tool" ]; then
-            echo "Actualizando ${tool%/}..."
-            cd "$tool" && git pull && cd ..
-        fi
-    done
-fi
+# Actualizar herramientas en ~/
+echo ""
+echo "Actualizando herramientas en ~/ ..."
+cd "$HOME"
+for tool in */; do
+    toolname="${tool%/}"
+    if [ -d "$toolname" ] && [ -d "$toolname/.git" ]; then
+        echo "Actualizando $toolname..."
+        cd "$toolname" && git pull && cd "$HOME"
+    fi
+done
 
 echo "[OK] xoniant32 actualizado"
 EOF
@@ -366,10 +364,13 @@ COMANDOS:
   xoni-help                    : Muestra esta ayuda
   xoni-menu                    : Menú interactivo
   xoni-update                  : Actualiza scripts y herramientas
-  xoni-install <herramienta>   : Instala herramientas XONI en ~/xoni/
+  xoni-install <herramienta>   : Instala herramientas XONI en ~/
 
 HERRAMIENTAS DISPONIBLES:
-  xonitube, xonigraf, xonichat, xonimail, ...
+  xonitube, xonigraf, xonichat, xonimail, xonicar, xoniclus, xoniconver,
+  xonidate, xonidal, xonidip, xoniencript, xonihelp, xonilab, xoniclient,
+  xoniserver, xoniterm, xonifs, xonigrep, xonisearch, xonicrypt,
+  xonidecode, xonicron, xonisync
 
 ATAJOS:
   Win + x   : Menú principal
@@ -427,7 +428,7 @@ Comandos útiles:
   xoni-help     : Muestra esta ayuda
   xoni-menu     : Menú interactivo
   xoni-update   : Actualiza scripts y herramientas
-  xoni-install  : Instala herramientas XONI
+  xoni-install  : Instala herramientas XONI directamente en ~/
   sudo connmanctl : Configura la red WiFi
 
 El sistema ARRANCA DIRECTAMENTE EN MODO GRÁFICO
@@ -452,6 +453,7 @@ echo "  - TODAS las dependencias gráficas conservadas"
 echo "  - Openbox como gestor de ventanas mínimo"
 echo "  - ALSA + Connman + mpv listos"
 echo "  - Scripts XONI instalados"
+echo "  - HERRAMIENTAS XONI SE INSTALAN DIRECTAMENTE EN ~/"
 echo ""
 echo "Para instalar xonitube: xoni-install xonitube"
 echo ""
