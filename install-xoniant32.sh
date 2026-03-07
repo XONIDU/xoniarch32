@@ -1,13 +1,14 @@
 #!/bin/bash
-# install-xoniant32.sh – Terminal gráfica fija (herramientas en home)
+# install-xoniant32.sh – Terminal gráfica fija con gestor de ventanas
 # Autor: Darian Alberto Camacho Salas
 # Repositorio: https://github.com/XONIDU/xoniant32
 #
-# Este script elimina escritorios y gestores de display,
-# pero CONSERVA TODAS LAS DEPENDENCIAS GRÁFICAS.
+# Este script elimina escritorios completos y aplicaciones pesadas,
+# pero CONSERVA Openbox como gestor de ventanas con todas sus funciones.
 # El sistema ARRANCA DIRECTAMENTE en una terminal maximizada
 # que NO SE PUEDE CERRAR.
-# Las herramientas XONI se instalan directamente en ~/ (ej: ~/xonitube)
+# Las herramientas XONI se instalan en carpetas individuales en ~/
+# Se conservan atajos como Alt+TAB para cambiar entre ventanas.
 
 set -euo pipefail
 trap 'echo -e "\033[0;31m[ERROR] Falló en la línea $LINENO\033[0m" >&2' ERR
@@ -55,7 +56,6 @@ configure_wifi() {
     read -p "Presiona Enter para continuar..."
     
     sudo connmanctl
-    # connmanctl es interactivo, así que damos instrucciones
     echo ""
     echo "Dentro de connmanctl, sigue estos pasos:"
     echo "  agent on"
@@ -67,11 +67,10 @@ configure_wifi() {
     echo ""
     read -p "Presiona Enter cuando hayas terminado de configurar la red..."
     
-    # Verificar de nuevo la conexión
     if check_internet; then
         return 0
     else
-        warn "Todavía no hay conexión. Puedes intentar de nuevo o salir."
+        warn "Todavía no hay conexión."
         read -p "¿Quieres reintentar configurar WiFi? (s/n): " RETRY
         if [[ "$RETRY" =~ ^[Ss]$ ]]; then
             configure_wifi
@@ -79,18 +78,6 @@ configure_wifi() {
             return 1
         fi
     fi
-}
-
-# ============================================
-# FUNCIÓN PARA CONFIGURAR DNS MANUAL
-# ============================================
-configure_dns() {
-    echo ""
-    echo "Configurando servidor DNS manual (8.8.8.8)..."
-    echo "nameserver 8.8.8.8" | sudo tee /etc/resolv.conf
-    echo "nameserver 8.8.4.4" | sudo tee -a /etc/resolv.conf
-    info "DNS configurado."
-    sleep 2
 }
 
 # ============================================
@@ -108,23 +95,20 @@ if ! check_internet; then
     echo ""
     echo "Opciones:"
     echo "  1) Configurar WiFi ahora (connman)"
-    echo "  2) Configurar DNS manualmente (8.8.8.8)"
-    echo "  3) Salir"
-    read -p "Elige una opción [1-3]: " NET_OPT
+    echo "  2) Salir"
+    read -p "Elige una opción [1-2]: " NET_OPT
     case $NET_OPT in
         1) configure_wifi ;;
-        2) configure_dns ;;
         *) error_exit "Instalación cancelada." ;;
     esac
     
-    # Verificar una vez más
     if ! check_internet; then
         error_exit "No se pudo establecer conexión. Abortando."
     fi
 fi
 
 # ============================================
-# MENSAJE DE ADVERTENCIA (después de verificar red)
+# MENSAJE DE ADVERTENCIA
 # ============================================
 echo ""
 echo "ADVERTENCIA: Este script ELIMINARÁ:"
@@ -136,14 +120,14 @@ echo "  - NetworkManager (usaremos connman nativo)"
 echo "  - Scripts antiguos (xoniarch-*)"
 echo ""
 echo "CONSERVARÁ:"
-echo "  - TODAS las dependencias gráficas (GTK, Qt, bibliotecas X, controladores)"
-echo "  - Openbox (gestor de ventanas MÍNIMO)"
+echo "  - Openbox con TODAS sus funciones (gestor de ventanas completo)"
+echo "  - Atajos de teclado como Alt+TAB para cambiar ventanas"
 echo "  - Terminal fija (rxvt-unicode) - NO SE PUEDE CERRAR"
 echo "  - ALSA para audio"
 echo "  - Connman para WiFi (configurado)"
 echo "  - mpv + yt-dlp (para xonitube)"
 echo "  - Scripts XONI (xoni-install, xoni-update, xoni-help, xoni-menu)"
-echo "  - Las herramientas XONI se instalarán DIRECTAMENTE en ~/ (ej: ~/xonitube)"
+echo "  - Las herramientas XONI se instalarán en carpetas individuales en ~/"
 echo ""
 read -p "¿Estás seguro? (escribe YES): " CONFIRM
 [ "$CONFIRM" != "YES" ] && error_exit "Operación cancelada."
@@ -207,8 +191,8 @@ apt update || warn "Error en apt update, continuando..."
 info "Instalando paquetes base..."
 apt install -y git curl wget htop nano alsa-utils connman
 
-# Entorno gráfico mínimo (Openbox + terminal)
-apt install -y xorg openbox rxvt-unicode
+# Xorg + Openbox completo
+apt install -y xorg openbox obconf rxvt-unicode
 
 # Herramientas multimedia
 apt install -y mpv yt-dlp ffmpeg
@@ -258,12 +242,13 @@ cp /etc/mpv/mpv.conf "$USER_HOME/.config/mpv/"
 chown -R "$TARGET_USER":"$TARGET_USER" "$USER_HOME/.config/mpv"
 
 # ============================================
-# 7. CONFIGURAR OPENBOX (TERMINAL FIJA)
+# 7. CONFIGURAR OPENBOX (CON TODAS LAS FUNCIONES)
 # ============================================
-info "Configurando Openbox con terminal fija..."
+info "Configurando Openbox con terminal fija y atajos completos..."
 
 mkdir -p "$USER_HOME/.config/openbox"
 
+# Configuración completa de Openbox (conserva Alt+TAB y demás)
 cat > "$USER_HOME/.config/openbox/rc.xml" << 'EOF'
 <?xml version="1.0" encoding="UTF-8"?>
 <openbox_config>
@@ -277,12 +262,22 @@ cat > "$USER_HOME/.config/openbox/rc.xml" << 'EOF'
     </application>
   </applications>
   <menu><file>~/.config/openbox/menu.xml</file></menu>
+  
+  <!-- Conservar los atajos de teclado originales de Openbox -->
   <keyboard>
+    <!-- Atajos personalizados XONI -->
     <keybind key="W-x"><action name="Execute"><command>xoni-menu</command></action></keybind>
     <keybind key="W-t"><action name="Execute"><command>urxvt</command></action></keybind>
     <keybind key="W-h"><action name="Execute"><command>xoni-help</command></action></keybind>
     <keybind key="W-u"><action name="Execute"><command>xoni-update</command></action></keybind>
     <keybind key="W-q"><action name="Exit"/></keybind>
+    
+    <!-- Atajos estándar de Openbox (conservados) -->
+    <keybind key="A-Tab"><action name="NextWindow"/></keybind>
+    <keybind key="A-S-Tab"><action name="PreviousWindow"/></keybind>
+    <keybind key="A-F4"><action name="Close"/></keybind>
+    <keybind key="A-Space"><action name="ShowMenu"><menu>client-menu</menu></action></keybind>
+    <keybind key="W-d"><action name="ToggleShowDesktop"/></keybind>
   </keyboard>
 </openbox_config>
 EOF
@@ -298,6 +293,17 @@ cat > "$USER_HOME/.config/openbox/menu.xml" << 'EOF'
     <item label="Actualizar xoniant32"><action name="Execute"><command>urxvt -e xoni-update</command></action></item>
     <item label="Ayuda"><action name="Execute"><command>urxvt -e xoni-help</command></action></item>
     <item label="Cerrar sesión"><action name="Exit"/></item>
+  </menu>
+  
+  <!-- Mantener el menú cliente de Openbox (con Alt+Espacio) -->
+  <menu id="client-menu">
+    <item label="Restaurar"><action name="Unmaximize"/><action name="MoveResizeTo"><x>center</x><y>center</y><width>50%</width><height>50%</height></action></item>
+    <item label="Mover"><action name="Move"/></item>
+    <item label="Redimensionar"><action name="Resize"/></item>
+    <item label="Iconificar"><action name="Iconify"/></item>
+    <item label="Maximizar"><action name="ToggleMaximize"/></item>
+    <separator/>
+    <item label="Cerrar"><action name="Close"/></item>
   </menu>
 </openbox_menu>
 EOF
@@ -347,21 +353,29 @@ echo "Comandos útiles:"
 echo "  xoni-help     : Muestra esta ayuda"
 echo "  xoni-menu     : Menú interactivo"
 echo "  xoni-update   : Actualiza xoniant32"
-echo "  xoni-install  : Instala herramientas XONI directamente en ~/"
+echo "  xoni-install  : Instala herramientas XONI en carpetas individuales en ~/"
 echo "  sudo connmanctl : Configura la red WiFi"
+echo ""
+echo "ATAJOS DE TECLADO:"
+echo "  Alt+TAB       : Cambiar entre ventanas"
+echo "  Alt+Espacio   : Menú de ventana"
+echo "  Alt+F4        : Cerrar ventana"
+echo "  Win+x         : Menú XONI"
+echo "  Win+t         : Nueva terminal"
+echo "  Win+h         : Ayuda"
 echo "========================================"
 EOF
 
 chown -R "$TARGET_USER":"$TARGET_USER" "$USER_HOME/.config" "$USER_HOME/.xinitrc" "$USER_HOME/.bashrc"
 
 # ============================================
-# 9. CREAR SCRIPTS XONI (herramientas en home)
+# 9. CREAR SCRIPTS XONI (herramientas en carpetas individuales)
 # ============================================
-info "Creando scripts XONI (herramientas directamente en ~/)..."
+info "Creando scripts XONI (herramientas en carpetas individuales en ~/)..."
 
 cat > /usr/local/bin/xoni-install << 'EOF'
 #!/bin/bash
-# xoni-install – Instalador de herramientas XONI directamente en ~/
+# xoni-install – Instalador de herramientas XONI en carpetas individuales en ~/
 # Autor: Darian Alberto Camacho Salas
 
 REPO_BASE="https://github.com/XONIDU"
@@ -455,7 +469,7 @@ COMANDOS:
   xoni-help                    : Muestra esta ayuda
   xoni-menu                    : Menú interactivo
   xoni-update                  : Actualiza scripts y herramientas
-  xoni-install <herramienta>   : Instala herramientas XONI en ~/
+  xoni-install <herramienta>   : Instala herramientas XONI en ~/ (carpeta individual)
 
 HERRAMIENTAS DISPONIBLES:
   xonitube, xonigraf, xonichat, xonimail, xonicar, xoniclus, xoniconver,
@@ -463,12 +477,15 @@ HERRAMIENTAS DISPONIBLES:
   xoniserver, xoniterm, xonifs, xonigrep, xonisearch, xonicrypt,
   xonidecode, xonicron, xonisync
 
-ATAJOS:
-  Win + x   : Menú principal
-  Win + t   : Nueva terminal
-  Win + h   : Ayuda
-  Win + u   : Actualizar
-  Win + q   : Cerrar sesión
+ATAJOS DE TECLADO:
+  Alt+TAB       : Cambiar entre ventanas
+  Alt+Espacio   : Menú de ventana
+  Alt+F4        : Cerrar ventana
+  Win+x         : Menú XONI
+  Win+t         : Nueva terminal
+  Win+h         : Ayuda
+  Win+u         : Actualizar
+  Win+q         : Cerrar sesión
 
 El sistema ARRANCA DIRECTAMENTE EN MODO GRÁFICO
 La terminal principal es FIJA (no se puede cerrar)
@@ -519,8 +536,16 @@ Comandos útiles:
   xoni-help     : Muestra esta ayuda
   xoni-menu     : Menú interactivo
   xoni-update   : Actualiza scripts y herramientas
-  xoni-install  : Instala herramientas XONI directamente en ~/
+  xoni-install  : Instala herramientas XONI en ~/ (carpeta individual)
   sudo connmanctl : Configura la red WiFi
+
+ATAJOS DE TECLADO:
+  Alt+TAB       : Cambiar entre ventanas
+  Alt+Espacio   : Menú de ventana
+  Alt+F4        : Cerrar ventana
+  Win+x         : Menú XONI
+  Win+t         : Nueva terminal
+  Win+h         : Ayuda
 
 El sistema ARRANCA DIRECTAMENTE EN MODO GRÁFICO
 La terminal principal es FIJA (no se puede cerrar)
@@ -540,11 +565,11 @@ echo "antiX ha sido transformado en xoniant32"
 echo ""
 echo "Características:"
 echo "  - Terminal gráfica fija (NO se puede cerrar)"
-echo "  - TODAS las dependencias gráficas conservadas"
-echo "  - Openbox como gestor de ventanas mínimo"
+echo "  - Openbox completo con todos los atajos (Alt+TAB, Alt+Espacio, etc.)"
+echo "  - Gestor de ventanas funcional"
 echo "  - ALSA + Connman + mpv listos"
 echo "  - Scripts XONI instalados"
-echo "  - HERRAMIENTAS XONI SE INSTALAN DIRECTAMENTE EN ~/"
+echo "  - HERRAMIENTAS XONI SE INSTALAN EN CARPETAS INDIVIDUALES EN ~/"
 echo ""
 echo "Para instalar xonitube: xoni-install xonitube"
 echo ""
