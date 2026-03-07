@@ -1,17 +1,18 @@
 #!/bin/bash
-# install-xoniant32.sh – Script de purga ULTRA minimalista
+# install-xoniant32.sh – Script de purga ULTRA minimalista pero funcional
 # Autor: Darian Alberto Camacho Salas
 # Repositorio: https://github.com/XONIDU/xoniant32
 #
-# Este script elimina TODO lo innecesario de una instalación antiX existente
-# y deja SOLO:
+# Este script elimina lo innecesario de una instalación antiX existente
+# pero CONSERVA los temas GTK y bibliotecas necesarias para aplicaciones gráficas.
+# Deja SOLO:
 #   - Openbox (ventanas mínimas)
-#   - Una terminal fija que ocupa toda la pantalla (rxvt-unicode)
+#   - Terminal fija (rxvt-unicode)
 #   - Audio (ALSA)
-#   - Connman (nativo) – sin configuración extra
-#   - Temas GTK básicos para que las aplicaciones gráficas funcionen
+#   - Connman (sin configuración extra)
+#   - Temas GTK (para que funcionen apps como mgba-qt)
 #   - Scripts XONI
-#   - NADA MÁS
+#   - NADA MÁS (sin escritorios, barras, gestores de display)
 
 set -euo pipefail
 trap 'echo -e "\033[0;31m[ERROR] Falló en la línea $LINENO\033[0m" >&2' ERR
@@ -37,28 +38,29 @@ fi
 
 clear
 echo "========================================"
-echo "   XONIANT32 - PURGA ULTRA MINIMALISTA "
+echo "   XONIANT32 - PURGA MINIMALISTA       "
+echo "   by Darian Alberto Camacho Salas     "
 echo "========================================"
 echo "ADVERTENCIA: Este script ELIMINARÁ:"
 echo "  - TODOS los escritorios completos"
-echo "  - TODAS las aplicaciones gráficas"
+echo "  - TODAS las aplicaciones gráficas pesadas"
 echo "  - TODOS los gestores de display"
 echo "  - Barras de tareas, fondos, compositores"
-echo "  - NetworkManager (usaremos connman)"
+echo "  - NetworkManager (usaremos connman nativo)"
 echo ""
-echo "SOLO DEJARÁ:"
-echo "  - Openbox (mínimo)"
+echo "CONSERVARÁ:"
+echo "  - Openbox"
 echo "  - Terminal fija (rxvt-unicode)"
 echo "  - ALSA para audio"
-echo "  - Connman (sin configurar)"
-echo "  - Temas GTK básicos (para apps gráficas)"
+echo "  - Connman (sin configuración extra)"
+echo "  - Temas GTK (para apps gráficas como mgba-qt)"
 echo "  - Scripts XONI"
 echo ""
 read -p "¿Estás seguro? (escribe YES): " CONFIRM
 [ "$CONFIRM" != "YES" ] && error_exit "Operación cancelada."
 
 # ============================================
-# 1. PURGA MASIVA
+# 1. PURGA MASIVA (pero conservando temas GTK)
 # ============================================
 info "Purgando escritorios completos..."
 apt purge -y xfce4* lxde* lxqt* mate-* cinnamon* gnome-* kde-* || true
@@ -66,7 +68,7 @@ apt purge -y xfce4* lxde* lxqt* mate-* cinnamon* gnome-* kde-* || true
 info "Purgando gestores de ventanas adicionales..."
 apt purge -y fluxbox icewm jwm dwm awesome i3* || true
 
-info "Purgando aplicaciones gráficas (navegadores, suites, reproductores)..."
+info "Purgando aplicaciones gráficas pesadas..."
 apt purge -y firefox* chromium* seamonkey* libreoffice* abiword gnumeric || true
 apt purge -y vlc smplayer audacious parole gimp inkscape blender shotwell || true
 apt purge -y thunderbird* claws-mail* sylpheed* || true
@@ -86,6 +88,10 @@ apt purge -y build-essential gcc g++ make cmake || true
 
 info "Purgando documentación..."
 apt purge -y man-db manpages info || true
+
+# NO purgamos temas GTK ni bibliotecas gráficas esenciales
+# Estas líneas están comentadas para no eliminarlas:
+# apt purge -y adwaita-icon-theme gtk2-engines gtk3-engines || true
 
 # ============================================
 # 2. AUTOLIMPIEZA
@@ -117,8 +123,8 @@ apt install -y openbox rxvt-unicode
 # Connman (WiFi nativo)
 apt install -y connman
 
-# Temas GTK básicos para que las aplicaciones gráficas funcionen correctamente
-apt install -y adwaita-icon-theme gtk2-engines gtk2-engines-pixbuf gtk2-engines-adwaita
+# Temas GTK (para aplicaciones como mgba-qt)
+apt install -y adwaita-icon-theme gtk2-engines gtk3-engines
 
 # ============================================
 # 4. CONFIGURAR OPENBOX (TERMINAL FIJA)
@@ -131,7 +137,6 @@ USER_HOME="/home/$TARGET_USER"
 
 mkdir -p "$USER_HOME/.config/openbox"
 
-# Configuración de Openbox
 cat > "$USER_HOME/.config/openbox/rc.xml" << 'EOF'
 <?xml version="1.0" encoding="UTF-8"?>
 <openbox_config>
@@ -155,7 +160,6 @@ cat > "$USER_HOME/.config/openbox/rc.xml" << 'EOF'
 </openbox_config>
 EOF
 
-# Menú minimalista
 cat > "$USER_HOME/.config/openbox/menu.xml" << 'EOF'
 <?xml version="1.0" encoding="utf-8"?>
 <openbox_menu>
@@ -171,13 +175,11 @@ cat > "$USER_HOME/.config/openbox/menu.xml" << 'EOF'
 </openbox_menu>
 EOF
 
-# Autostart - SOLO la terminal principal
 cat > "$USER_HOME/.config/openbox/autostart" << 'EOF'
 # TERMINAL PRINCIPAL (NO SE PUEDE CERRAR)
 urxvt -title "principal" &
 EOF
 
-# .xinitrc
 cat > "$USER_HOME/.xinitrc" << 'EOF'
 #!/bin/sh
 exec openbox-session
@@ -193,10 +195,26 @@ if [ -z "$DISPLAY" ] && [ "$(tty)" = "/dev/tty1" ]; then
 fi
 EOF
 
+# Mensaje de bienvenida al hacer login
+cat >> "$USER_HOME/.bashrc" << 'EOF'
+
+# Mensaje de bienvenida de Xoniant32
+echo "========================================"
+echo "   XONIANT32 by Darian Alberto Camacho Salas"
+echo "========================================"
+echo "Comandos útiles:"
+echo "  xoni-help     : Muestra esta ayuda"
+echo "  xoni-menu     : Menú interactivo"
+echo "  xoni-update   : Actualiza xoniant32 desde GitHub"
+echo "  xoni-install  : Instala herramientas XONI"
+echo "  sudo connmanctl : Configura la red WiFi"
+echo "========================================"
+EOF
+
 chown -R "$TARGET_USER":"$TARGET_USER" "$USER_HOME/.config" "$USER_HOME/.xinitrc" "$USER_HOME/.bashrc"
 
 # ============================================
-# 5. CREAR SCRIPTS XONI
+# 5. CREAR SCRIPTS XONI (cambiados a xoniant)
 # ============================================
 info "Creando scripts XONI..."
 
@@ -226,12 +244,18 @@ cat > /usr/local/bin/xoni-update << 'EOF'
 REPO="https://github.com/XONIDU/xoniant32.git"
 DIR="/opt/xoniant32"
 if [ ! -d "$DIR" ]; then
-    git clone "$REPO" "$DIR"
+    sudo git clone "$REPO" "$DIR"
 else
-    cd "$DIR" && git pull
+    cd "$DIR" && sudo git pull
 fi
 # Sincronizar scripts y configuraciones
-rsync -av --chown=root:root "$DIR/rootfs/" / 2>/dev/null || true
+sudo rsync -av --chown=root:root "$DIR/rootfs/" / 2>/dev/null || true
+# Actualizar este mismo script si hay cambios
+if [ -f "$DIR/install-xoniant32.sh" ]; then
+    sudo cp "$DIR/install-xoniant32.sh" /usr/local/bin/install-xoniant32.sh
+    sudo chmod +x /usr/local/bin/install-xoniant32.sh
+    echo "[OK] Script de instalación actualizado"
+fi
 echo "[OK] xoniant32 actualizado desde GitHub"
 EOF
 
@@ -325,12 +349,12 @@ echo "========================================"
 echo ""
 echo "antiX ha sido transformado en xoniant32"
 echo ""
-echo "SOLO QUEDA:"
-echo "  - Openbox (mínimo)"
-echo "  - Terminal fija (rxvt-unicode)"
-echo "  - ALSA para audio"
-echo "  - Connman (sin configurar)"
-echo "  - Temas GTK básicos"
+echo "CONSERVA:"
+echo "  - Openbox"
+echo "  - Terminal fija"
+echo "  - ALSA"
+echo "  - Connman"
+echo "  - Temas GTK (para apps como mgba-qt)"
 echo "  - Scripts XONI"
 echo ""
 echo "NO HAY:"
@@ -339,7 +363,7 @@ echo "  - Barras de tareas"
 echo "  - Fondos de pantalla"
 echo "  - Gestores de display"
 echo ""
-echo "WiFi: usa 'sudo connmanctl' desde la terminal o la opción 3 del menú."
+echo "WiFi: sudo connmanctl (opción 3 del menú)"
 echo ""
 echo "Reinicia el sistema para aplicar los cambios."
 echo ""
