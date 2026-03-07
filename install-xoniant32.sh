@@ -31,11 +31,102 @@ if [ ! -f /etc/antix-version ]; then
     error_exit "Este script debe ejecutarse en antiX Linux."
 fi
 
+# ============================================
+# FUNCIÓN PARA VERIFICAR CONEXIÓN A INTERNET
+# ============================================
+check_internet() {
+    echo -n "Verificando conexión a internet... "
+    if ping -c 1 google.com &>/dev/null || ping -c 1 8.8.8.8 &>/dev/null; then
+        echo -e "${GREEN}OK${NC}"
+        return 0
+    else
+        echo -e "${RED}FALLÓ${NC}"
+        return 1
+    fi
+}
+
+# ============================================
+# FUNCIÓN PARA CONFIGURAR WIFI CON CONNMAN
+# ============================================
+configure_wifi() {
+    echo ""
+    echo "Vamos a configurar la red WiFi usando connman."
+    echo "Asegúrate de tener el nombre de tu red (SSID) y la contraseña."
+    read -p "Presiona Enter para continuar..."
+    
+    sudo connmanctl
+    # connmanctl es interactivo, así que damos instrucciones
+    echo ""
+    echo "Dentro de connmanctl, sigue estos pasos:"
+    echo "  agent on"
+    echo "  enable wifi"
+    echo "  scan wifi"
+    echo "  services"
+    echo "  connect wifi_nombre_de_tu_red  (usa TAB para autocompletar)"
+    echo "  quit"
+    echo ""
+    read -p "Presiona Enter cuando hayas terminado de configurar la red..."
+    
+    # Verificar de nuevo la conexión
+    if check_internet; then
+        return 0
+    else
+        warn "Todavía no hay conexión. Puedes intentar de nuevo o salir."
+        read -p "¿Quieres reintentar configurar WiFi? (s/n): " RETRY
+        if [[ "$RETRY" =~ ^[Ss]$ ]]; then
+            configure_wifi
+        else
+            return 1
+        fi
+    fi
+}
+
+# ============================================
+# FUNCIÓN PARA CONFIGURAR DNS MANUAL
+# ============================================
+configure_dns() {
+    echo ""
+    echo "Configurando servidor DNS manual (8.8.8.8)..."
+    echo "nameserver 8.8.8.8" | sudo tee /etc/resolv.conf
+    echo "nameserver 8.8.4.4" | sudo tee -a /etc/resolv.conf
+    info "DNS configurado."
+    sleep 2
+}
+
+# ============================================
+# VERIFICAR CONEXIÓN ANTES DE COMENZAR
+# ============================================
 clear
 echo "========================================"
 echo "   XONIANT32 - TERMINAL GRÁFICA FIJA   "
 echo "   by Darian Alberto Camacho Salas     "
 echo "========================================"
+echo ""
+
+if ! check_internet; then
+    warn "No hay conexión a internet. Es necesaria para continuar."
+    echo ""
+    echo "Opciones:"
+    echo "  1) Configurar WiFi ahora (connman)"
+    echo "  2) Configurar DNS manualmente (8.8.8.8)"
+    echo "  3) Salir"
+    read -p "Elige una opción [1-3]: " NET_OPT
+    case $NET_OPT in
+        1) configure_wifi ;;
+        2) configure_dns ;;
+        *) error_exit "Instalación cancelada." ;;
+    esac
+    
+    # Verificar una vez más
+    if ! check_internet; then
+        error_exit "No se pudo establecer conexión. Abortando."
+    fi
+fi
+
+# ============================================
+# MENSAJE DE ADVERTENCIA (después de verificar red)
+# ============================================
+echo ""
 echo "ADVERTENCIA: Este script ELIMINARÁ:"
 echo "  - TODOS los escritorios completos"
 echo "  - TODAS las aplicaciones gráficas pesadas"
