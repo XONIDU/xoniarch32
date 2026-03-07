@@ -1,75 +1,81 @@
-# 🏔️ XONIANT32 v4.2.0
+# XONIANT32 v4.2.0
 ### by Darian Alberto Camacho Salas
 
 ---
 
 ## 📋 Descripción
 
-**XONIANT32** es una distribución Linux ultraligera basada en **antiX 32 bits**, diseñada específicamente para hardware antiguo y de bajos recursos (386, Pentium, Celeron). El sistema consiste en una base antiX completamente purgada de todo lo innecesario, dejando solo:
-
-- **Openbox** como gestor de ventanas
-- **Terminal fija** que no se puede cerrar
-- **Soporte de audio** completo (ALSA + PulseAudio)
-- **nmtui** para configuración de red
-- **Scripts XONI** para instalar herramientas desde GitHub
-
-El resultado es un sistema extremadamente liviano que arranca directamente en modo gráfico con una única terminal fija.
+**XONIANT32** es una distribución Linux ligera basada en **antiX Linux (Debian Stable)**, diseñada específicamente para hardware de 32 bits con recursos limitados. El sistema incluye un instalador completo que automatiza todo el proceso desde el live USB hasta un sistema funcional con entorno gráfico y herramientas XONI.
 
 ---
 
 ## ✨ Características principales
 
-- **Ultraligero** – Consume menos de 150 MB de RAM en reposo
-- **Sin escritorio** – Solo Openbox con terminal fija (no se puede cerrar)
-- **Gráfico siempre activo** – Arranca directamente en X sin gestor de display
-- **Soporte de audio** – ALSA + PulseAudio para todo tipo de hardware
-- **Red por terminal** – `nmtui` para configurar WiFi/Ethernet fácilmente
-- **Scripts XONI** – `installxoni`, `xoniarch-update`, `xoniarch-help`, `xoniarch-menu`
-- **Actualización desde GitHub** – Mantén tus herramientas al día
+- **Instalador todo-en-uno** – Un solo script que particiona, instala y configura todo.
+- **Gráfico siempre activo** – Arranca directamente en entorno gráfico (sin startx manual).
+- **Terminal fija** – La terminal principal no se puede cerrar.
+- **Soporte completo de hardware** – Audio, video, red, WiFi, Bluetooth (controladores incluidos).
+- **Herramientas XONI integradas** – Instalación modular mediante `xoni-install`.
+- **Actualización desde GitHub** – Mantén tu sistema actualizado con `xoni-update`.
 
 ---
 
-## 📥 Requisitos previos
+## ⚠️ Advertencia
 
-- **AntiX 32 bits** ya instalado en el disco duro (versión 21, 22 o 23)
-- Conexión a internet (para descargar paquetes durante la conversión)
-- Al menos **2 GB libres** en el disco (después de la purga quedará mucho más espacio)
+Este sistema es para **fines educativos y personales**. El autor no se responsabiliza del uso que se le dé. Úsalo con responsabilidad.
 
 ---
 
-## 🚀 Instalación / Conversión
+## 📥 Instalación desde live USB
 
-### Paso 1: Arranca tu antiX ya instalado
+### 🔧 Requisitos previos
+- Live USB de **antiX Linux 32 bits** (descargar desde [antixlinux.com](https://antixlinux.com))
+- Conexión a internet (cable o WiFi)
+- Al menos 8 GB libres en el disco de destino
 
-Inicia sesión normalmente.
+### 🚀 Pasos de instalación
 
-### Paso 2: Abre una terminal y descarga el script de conversión
+#### 1. Arranca desde el live USB de antiX Linux 32 bits
 
+#### 2. Conéctate a internet
+
+**Por WiFi (usando connman):**
 ```bash
-wget -O purgar-xoniant32.sh https://raw.githubusercontent.com/XONIDU/xoniant32/main/purgar.sh
+sudo connmanctl
+agent on
+enable wifi
+scan wifi
+services
+connect wifi_nombre_de_tu_red
+# Ingresa la contraseña cuando se solicite
+quit
 ```
 
-(Si no tienes `wget`, usa `curl -O` o crea el archivo manualmente con `nano`)
+**Por cable Ethernet:** conecta y listo.
 
-### Paso 3: Da permisos de ejecución
-
-```bash
-chmod +x purgar-xoniant32.sh
-```
-
-### Paso 4: Ejecuta el script como root
+#### 3. Descarga el instalador
 
 ```bash
-sudo ./purgar-xoniant32.sh
+wget -O xoniant32-install.sh https://raw.githubusercontent.com/XONIDU/xoniant32/main/install.sh
 ```
 
-### Paso 5: Sigue las instrucciones
+#### 4. Ejecuta el instalador
 
-- El script te pedirá confirmación con **YES** (en mayúsculas)
-- La purga puede tomar varios minutos dependiendo de tu hardware
-- Al finalizar, te pedirá reiniciar
+```bash
+chmod +x xoniant32-install.sh
+./xoniant32-install.sh
+```
 
-### Paso 6: Reinicia
+El script te guiará por:
+- Configuración regional (zona horaria, idioma, teclado)
+- Creación de usuario y contraseña
+- Selección del disco de instalación
+- Particionado (automático con o sin swap)
+- Copia del sistema live al disco
+- Instalación de gestores de display (lightdm, sddm, lxdm, slim)
+- Personalización XONI (scripts, atajos, terminal fija)
+
+#### 5. Al finalizar, reinicia
 
 ```bash
 sudo reboot
@@ -79,11 +85,11 @@ sudo reboot
 
 ## 🎯 Primer inicio
 
-Después del reinicio:
+- **Usuario:** el que elegiste durante la instalación
+- **Contraseña:** la que configuraste
+- **Root:** `root` (misma contraseña)
 
-- El sistema arrancará directamente en **modo gráfico** con una **terminal fija** (no se puede cerrar)
-- Usuario: el mismo que tenías en antiX
-- Contraseña: la misma
+El sistema arrancará **directamente en modo gráfico** con una **terminal fija** que no se puede cerrar. Usa el menú contextual (clic derecho) o las teclas rápidas para acceder a las funciones.
 
 ---
 
@@ -91,13 +97,12 @@ Después del reinicio:
 
 | Comando | Descripción |
 |---------|-------------|
-| `xoniarch-help` | Mostrar ayuda completa |
-| `xoniarch-menu` | Abrir menú interactivo |
-| `installxoni <herramienta>` | Instalar herramienta XONI desde GitHub |
-| `xoniarch-update` | Actualizar todas las herramientas |
+| `xoni-install <herramienta>` | Instalar herramienta XONI desde GitHub |
+| `xoni-update` | Actualizar el sistema xoniant32 desde GitHub |
+| `xoni-menu` | Abrir menú interactivo |
+| `xoni-help` | Mostrar ayuda completa |
 | `nmtui` | Configurar red WiFi/Ethernet |
 | `htop` | Monitor del sistema |
-| `alsamixer` | Ajustar volumen |
 
 ---
 
@@ -108,7 +113,7 @@ Después del reinicio:
 | `Win + x` | Abrir menú principal |
 | `Win + t` | Abrir nueva terminal |
 | `Win + h` | Mostrar ayuda |
-| `Win + i` | Instalar herramienta XONI |
+| `Win + u` | Actualizar sistema |
 | `Win + q` | Cerrar sesión |
 
 ---
@@ -116,81 +121,81 @@ Después del reinicio:
 ## 🛠️ Herramientas XONI disponibles
 
 ```bash
-installxoni xonitube    # Reproductor de YouTube en terminal
-installxoni xonigraf    # Graficador matemático (requiere X)
-installxoni xonichat    # Chat con IA Gemini
-installxoni xonimail    # Cliente de correo desde terminal
-installxoni xoniencript # Cifrado de archivos
-installxoni xoniweb     # Análisis de malware web
-installxoni xonidip     # Generador de diplomas
-installxoni xonidate    # Generador de citas aleatorias
-installxoni xoniconver  # Conversor de formatos
-installxoni xoniter     # Acceso rápido a comandos
-installxoni xonial      # Monitoreo de servicio social
-installxoni xonispam    # Pruebas éticas de spam
+xoni-install xonitube    # Reproductor de videos YouTube
+xoni-install xonigraf    # Graficador matemático
+xoni-install xonichat    # Chat con IA Gemini
+xoni-install xonimail    # Cliente de correo
+xoni-install xoniencript # Cifrado de archivos
+xoni-install xoniweb     # Análisis de malware web
+xoni-install xonidip     # Generador de diplomas
+xoni-install xonidate    # Generador de citas aleatorias
+xoni-install xoniconver  # Conversor de formatos
+xoni-install xoniter     # Acceso rápido a comandos
+xoni-install xonial      # Monitoreo de servicio social
+xoni-install xonispam    # Pruebas éticas de spam
 ```
 
 ---
 
 ## 🔧 Solución de problemas comunes
 
+### ❌ Error de partición "device is mounted"
+
+```bash
+sudo umount /dev/sd*
+sudo partprobe /dev/sdX  # donde X es tu disco
+```
+
+### ❌ No aparece el disco en el instalador
+
+```bash
+lsblk  # Verifica que el disco sea visible
+# Si usas máquina virtual, asegura que el controlador SATA esté activado
+```
+
 ### ❌ WiFi no funciona
 
 ```bash
-sudo nmtui
-```
-Dentro de `nmtui`, selecciona "Activar una conexión" y elige tu red WiFi.
-
-### ❌ No hay sonido
-
-```bash
-alsamixer
-```
-Asegúrate de que no esté muteado (presiona `M` para activar). Luego prueba:
-```bash
-speaker-test -t sine -f 440
+sudo rfkill unblock wifi
+sudo connmanctl
+enable wifi
+scan wifi
+services
+connect wifi_nombre_de_tu_red
 ```
 
 ### ❌ La terminal fija se cerró accidentalmente
 
-Reinicia la sesión gráfica:
 ```bash
-sudo systemctl restart getty@tty1
+sudo systemctl restart lightdm   # o sddm, lxdm, slim según el que esté activo
 ```
-O simplemente reinicia el sistema.
 
-### ❌ Quiero instalar más paquetes
+### ❌ NetworkManager no inicia (antiX usa runit)
 
 ```bash
-sudo apt update
-sudo apt install <paquete>
+sudo ln -s /etc/sv/networkmanager /etc/service/networkmanager
+sudo sv start networkmanager
 ```
 
 ---
 
-## 📁 Estructura del repositorio
+## 📥 Descargar antiX Linux 32 bits
 
-```
-xoniant32/
-├── purgar.sh            # Script de conversión (ejecutar desde antiX)
-├── README.md            # Este archivo
-└── scripts/             # Scripts individuales (opcional)
-    ├── installxoni
-    ├── xoniarch-update
-    ├── xoniarch-help
-    └── xoniarch-menu
-```
+### 🌐 Mirrors oficiales
 
----
+| Región | Mirror |
+|--------|--------|
+| EE.UU. | `https://mirrors.ocf.berkeley.edu/antix-iso/` |
+| EE.UU. | `https://mirror.clarkson.edu/antix-iso/` |
+| Alemania | `https://ftp.halifax.rwth-aachen.de/antix/` |
+| Francia | `https://antix.jouvenot.net/` |
+| Países Bajos | `https://mirror.cyberbits.eu/antix/` |
 
-## 💻 Hardware probado
+### 📦 ISO recomendada
 
-| Equipo | Especificaciones | Estado |
-|--------|------------------|--------|
-| ASUS Eee PC 900 | Intel Celeron M 900MHz, 1GB RAM | ✅ Funciona perfecto |
-| ThinkPad X60 | Intel Core Duo, 2GB RAM | ✅ Funciona |
-| Pentium III | 800MHz, 512MB RAM | ✅ Funciona |
-| VirtualBox | Cualquier VM 32 bits | ✅ Funciona |
+- **Versión:** antiX-23.2 386 full edition
+- **Descarga directa:** [antiX-23.2_386-full.iso](https://sourceforge.net/projects/antix-linux/files/Final/antiX-23.2/antiX-23.2_386-full.iso/download)
+- **Tamaño:** ~1.2 GB
 
 ---
 
@@ -198,38 +203,37 @@ xoniant32/
 
 ```bash
 # Actualizar herramientas XONI
-xoniarch-update
+xoni-update
 
-# Actualizar paquetes base (si es necesario)
-sudo apt update
-sudo apt upgrade
+# Actualizar paquetes del sistema
+sudo apt update && sudo apt upgrade -y
 ```
 
 ---
 
-## 🧠 ¿Cómo funciona el script de purga?
+## 💻 Hardware soportado
 
-El script `purgar.sh` realiza:
+### Mínimo
+- **Procesador**: Intel Pentium III / Celeron (32 bits)
+- **RAM**: 512 MB (1 GB recomendado)
+- **Almacenamiento**: 8 GB
+- **Gráficos**: VESA compatible
 
-1. **Purga masiva** de:
-   - Entornos de escritorio (XFCE, Fluxbox, IceWM, JWM)
-   - Aplicaciones pesadas (LibreOffice, Firefox, Thunderbird)
-   - Juegos, herramientas gráficas, clientes de correo
-   - Paquetes de desarrollo y documentación
+### Probado en
+- ASUS Eee PC 900 (Intel Celeron M 900MHz, 1GB RAM, GMA 900)
+- ThinkPad X60 (Intel Core Duo, 32 bits)
+- VirtualBox / QEMU
 
-2. **Instalación** de paquetes esenciales:
-   - Xorg mínimo
-   - Openbox + tint2 + feh + picom + rxvt-unicode
-   - ALSA + PulseAudio
-   - NetworkManager + nmtui
+---
 
-3. **Configuración**:
-   - Openbox con terminal fija (no se puede cerrar)
-   - Scripts XONI en `/usr/local/bin`
-   - Auto-login en tty1
-   - NetworkManager para runit
+## 🧠 Estructura del repositorio
 
-4. **Resultado**: antiX transformado en xoniant32, ultra minimalista.
+```
+xoniant32/
+├── install.sh          # Instalador principal (ejecutar desde live)
+├── README.md           # Este archivo
+└── .gitignore          # Archivos ignorados
+```
 
 ---
 
@@ -241,3 +245,13 @@ El script `purgar.sh` realiza:
 - **GitHub**: [@XONIDU](https://github.com/XONIDU)
 - **#Somos XONINDU**
 
+---
+
+## 🌐 Enlaces útiles
+
+- [Repositorio XONIANT32](https://github.com/XONIDU/xoniant32)
+- [antiX Linux Official](https://antixlinux.com/)
+- [Foro de antiX](https://www.antixforum.com/)
+
+---
+ 
