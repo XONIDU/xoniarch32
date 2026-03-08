@@ -1,12 +1,13 @@
 #!/bin/bash
-# install-xoniant32.sh – Terminal fija + limpieza de recursos
+# install-xoniant32-ultimate.sh – Terminal fija ULTIMATE (sin preguntas)
 # Autor: Darian Alberto Camacho Salas
 #
 # Este script:
-# 1. NO DESINSTALA NADA POR DEFECTO (solo pregunta)
-# 2. Configura Openbox con terminal fija que oculta el escritorio
-# 3. Ofrece limpiar paquetes innecesarios para liberar RAM
-# 4. Las herramientas XONI se instalan en ~/ (ej: ~/xonitube)
+# 1. ELIMINA AUTOMÁTICAMENTE paquetes innecesarios (sin preguntar)
+# 2. CONSERVA gráficos, audio, video, WiFi y Bluetooth (controladores)
+# 3. CONFIGURA Openbox con terminal fija que OCULTA EL ESCRITORIO
+# 4. Optimizado para XoniTube v5.5 (tamaño de ventana 640x360)
+# 5. Máxima compatibilidad con hardware de 32 bits (ASUS Eee PC 900)
 
 set -euo pipefail
 trap 'echo -e "\033[0;31m[ERROR] Falló en la línea $LINENO\033[0m" >&2' ERR
@@ -32,156 +33,103 @@ fi
 
 clear
 echo "========================================"
-echo "   XONIANT32 - TERMINAL FIJA + LIMPIEZA"
+echo "   XONIANT32 ULTIMATE - TERMINAL FIJA  "
 echo "   by Darian Alberto Camacho Salas     "
 echo "========================================"
+echo "Este script ELIMINA AUTOMÁTICAMENTE:"
+echo "  - Impresión (CUPS)"
+echo "  - Bluetooth"
+echo "  - Wicd (gestor alternativo)"
+echo "  - Scanner (saned)"
+echo "  - Juegos preinstalados"
+echo "  - Otros gestores (icewm, fluxbox, jwm)"
 echo ""
-echo "Este script te preguntará ANTES de eliminar nada."
-echo "Ningún paquete se borrará sin tu confirmación."
+echo "CONSERVA:"
+echo "  - Controladores de video, audio, red"
+echo "  - WiFi y Bluetooth (solo drivers, no servicios)"
+echo "  - Xorg completo"
+echo "  - ALSA + PulseAudio"
 echo ""
-
-# ============================================
-# SECCIÓN DE LIMPIEZA OPCIONAL (BASADA EN FOROS)
-# ============================================
+echo "INICIARÁ DIRECTAMENTE EN TERMINAL (sin escritorio)"
 echo "========================================"
-echo "   LIMPIEZA OPCIONAL DE RECURSOS        "
-echo "========================================"
 echo ""
-echo "Basado en recomendaciones de la comunidad antiX [citation:1][citation:3]"
-echo "para reducir el consumo de RAM (ahorro potencial: ~20-50 MB)"
-echo ""
-
-# Cups (servidor de impresión) - innecesario si no hay impresora
-if dpkg -l cups >/dev/null 2>&1; then
-    read -p "¿Eliminar servidor de impresión CUPS? (s/n) [recomendado si no tienes impresora]: " -n 1 -r
-    echo
-    if [[ $REPLY =~ ^[Ss]$ ]]; then
-        apt purge -y cups || warn "No se pudo eliminar cups"
-        info "CUPS eliminado."
-    fi
-fi
-
-# Bluetooth
-if dpkg -l bluez >/dev/null 2>&1; then
-    read -p "¿Eliminar soporte Bluetooth? (s/n) [ahorra ~10MB RAM]: " -n 1 -r
-    echo
-    if [[ $REPLY =~ ^[Ss]$ ]]; then
-        apt purge -y bluez* bluetooth* || warn "No se pudo eliminar bluetooth"
-        info "Bluetooth eliminado."
-    fi
-fi
-
-# Wicd (gestor de red alternativo) - no necesario si usas connman
-if dpkg -l wicd >/dev/null 2>&1; then
-    read -p "¿Eliminar wicd? (s/n) [usamos connman, ahorra ~15MB RAM]: " -n 1 -r
-    echo
-    if [[ $REPLY =~ ^[Ss]$ ]]; then
-        apt purge -y wicd* || warn "No se pudo eliminar wicd"
-        info "wicd eliminado."
-    fi
-fi
-
-# Saned (servicio de scanner)
-if dpkg -l saned >/dev/null 2>&1; then
-    read -p "¿Eliminar soporte de scanner (saned)? (s/n): " -n 1 -r
-    echo
-    if [[ $REPLY =~ ^[Ss]$ ]]; then
-        apt purge -y saned || warn "No se pudo eliminar saned"
-        info "saned eliminado."
-    fi
-fi
-
-# Servicios para portátiles (si es escritorio)
-if ! dmidecode -s system-product-name 2>/dev/null | grep -qi "laptop"; then
-    echo ""
-    echo "Parece que este equipo NO es un portátil."
-    read -p "¿Eliminar servicios específicos de portátiles (acpi, pcmciautils)? (s/n): " -n 1 -r
-    echo
-    if [[ $REPLY =~ ^[Ss]$ ]]; then
-        apt purge -y acpi acpid pcmciautils || warn "Alguno no se pudo eliminar"
-        info "Servicios de portátil eliminados."
-    fi
-fi
-
-# Juegos (gnome-games, etc.)
-read -p "¿Eliminar juegos preinstalados? (s/n) [ahorra ~30MB]: " -n 1 -r
-echo
-if [[ $REPLY =~ ^[Ss]$ ]]; then
-    apt purge -y gnome-games* aisleriot solitaire || warn "Algunos juegos no se eliminaron"
-    info "Juegos eliminados."
-fi
-
-# Gestores de ventanas adicionales (opcional, pero para xoniant32 solo necesitamos Openbox)
-echo ""
-echo "Xoniant32 usa Openbox como gestor principal."
-read -p "¿Eliminar otros gestores de ventanas (icewm, fluxbox, jwm)? (s/n) [recomendado]: " -n 1 -r
-echo
-if [[ $REPLY =~ ^[Ss]$ ]]; then
-    apt purge -y icewm* fluxbox* jwm* || warn "Algunos no se eliminaron"
-    info "Otros gestores eliminados."
-fi
+read -p "¿Continuar? (s/n): " CONFIRM
+[[ "$CONFIRM" =~ ^[Ss]$ ]] || error_exit "Operación cancelada."
 
 # ============================================
-# 2. AUTOLIMPIEZA FINAL
+# 1. ELIMINAR PAQUETES INNECESARIOS (AUTOMÁTICO)
 # ============================================
-info "Eliminando dependencias no usadas..."
-apt autoremove --purge -y
+info "Eliminando paquetes innecesarios (para liberar RAM y disco)..."
 
-info "Limpiando caché..."
-apt clean
-apt autoclean
+# Impresión
+apt purge -y cups cups-client cups-common cups-filters cups-ppdc || true
+
+# Bluetooth (servicios, no drivers)
+apt purge -y bluez bluetooth bluez-utils || true
+
+# Gestores de red alternativos
+apt purge -y wicd wicd-gtk wicd-daemon || true
+
+# Scanner
+apt purge -y sane saned sane-utils || true
+
+# Juegos y aplicaciones innecesarias
+apt purge -y gnome-games* aisleriot solitaire || true
+
+# Gestores de ventanas adicionales
+apt purge -y icewm* fluxbox* jwm* || true
 
 # ============================================
-# 3. INSTALAR PAQUETES NECESARIOS
+# 2. INSTALAR PAQUETES NECESARIOS
 # ============================================
 info "Actualizando repositorios..."
 apt update
 
-info "Instalando paquetes necesarios..."
-apt install -y git curl wget htop nano alsa-utils connman
-apt install -y xorg openbox rxvt-unicode
+info "Instalando paquetes esenciales..."
+apt install -y git curl wget htop nano alsa-utils pulseaudio pavucontrol
+apt install -y xorg xserver-xorg-core xserver-xorg-video-fbdev xserver-xorg-video-vesa
+apt install -y openbox rxvt-unicode
 apt install -y mpv yt-dlp ffmpeg
 apt install -y firmware-atheros firmware-iwlwifi firmware-realtek || true
 
-# ============================================
-# 4. CONFIGURAR CONNMAN
-# ============================================
-info "Configurando connman..."
-mkdir -p /etc/connman
-cat > /etc/connman/main.conf << 'EOF'
-[General]
-PreferredTechnologies = wifi,ethernet
-AllowHostnames = true
-AutoConnect = true
-EOF
-systemctl restart connman || sv restart connman || true
+# Controladores Intel (opcional, pero recomendado para Eee PC)
+apt install -y xserver-xorg-video-intel || true
 
 # ============================================
-# 5. CONFIGURAR MPV
+# 3. CONFIGURAR MPV (optimizado para 1GB RAM)
 # ============================================
-info "Configurando mpv..."
+info "Configurando mpv para bajo consumo de recursos..."
 mkdir -p /etc/mpv
 cat > /etc/mpv/mpv.conf << 'EOF'
+# Configuración ULTIMATE para mpv (bajo consumo)
 vo=x11
 ao=alsa
 cache=yes
-cache-secs=30
+cache-secs=15           # Reduce uso de RAM
 profile=fast
-msg-level=all=error
+vd-lavc-fast
+vd-lavc-skip-loop-filter=all
+no-sub
+no-osc
+no-osd-bar
+no-window-dragging      # Ahorra CPU
+keepaspect-window
+geometry=640x360        # Tamaño fijo (recomendado para XoniTube v5.5)
 x11-bypass-compositor=yes
+msg-level=all=error
 EOF
 
+# Configuración para el usuario
 TARGET_USER="${SUDO_USER:-$USER}"
 USER_HOME="/home/$TARGET_USER"
-
 mkdir -p "$USER_HOME/.config/mpv"
 cp /etc/mpv/mpv.conf "$USER_HOME/.config/mpv/"
 chown -R "$TARGET_USER":"$TARGET_USER" "$USER_HOME/.config/mpv"
 
 # ============================================
-# 6. CONFIGURAR OPENBOX (TERMINAL FIJA)
+# 4. CONFIGURAR OPENBOX (TERMINAL FIJA QUE OCULTA TODO)
 # ============================================
-info "Configurando Openbox con terminal fija..."
+info "Configurando Openbox con terminal fija que OCULTA EL ESCRITORIO..."
 
 mkdir -p "$USER_HOME/.config/openbox"
 
@@ -208,6 +156,13 @@ cat > "$USER_HOME/.config/openbox/rc.xml" << 'EOF'
     <keybind key="W-h"><action name="Execute"><command>xoni-help</command></action></keybind>
     <keybind key="W-q"><action name="Exit"/></keybind>
   </keyboard>
+  <mouse>
+    <context name="Root">
+      <mousebind button="Right" action="Press">
+        <action name="ShowMenu"><menu>root-menu</menu></action>
+      </mousebind>
+    </context>
+  </mouse>
 </openbox_config>
 EOF
 
@@ -215,7 +170,7 @@ EOF
 cat > "$USER_HOME/.config/openbox/menu.xml" << 'EOF'
 <?xml version="1.0" encoding="utf-8"?>
 <openbox_menu>
-  <menu id="root-menu" label="Xoniant32">
+  <menu id="root-menu" label="Xoniant32 Ultimate">
     <item label="Nueva terminal"><action name="Execute"><command>urxvt</command></action></item>
     <item label="Instalar herramienta XONI"><action name="Execute"><command>urxvt -e xoni-install</command></action></item>
     <item label="Configurar red"><action name="Execute"><command>urxvt -e sudo connmanctl</command></action></item>
@@ -224,7 +179,7 @@ cat > "$USER_HOME/.config/openbox/menu.xml" << 'EOF'
 </openbox_menu>
 EOF
 
-# Autostart - solo terminal
+# Autostart - SOLO LA TERMINAL (NADA MÁS)
 cat > "$USER_HOME/.config/openbox/autostart" << 'EOF'
 # TERMINAL PRINCIPAL - OCUPA TODA LA PANTALLA
 urxvt -title "principal" -fg white -bg black &
@@ -237,7 +192,24 @@ EOF
 chmod +x "$USER_HOME/.xinitrc"
 
 # ============================================
-# 7. DESACTIVAR OTROS GESTORES DE VENTANAS
+# 5. CONFIGURAR CONNMAN (WiFi)
+# ============================================
+info "Configurando connman (gestor de red liviano)..."
+apt install -y connman
+mkdir -p /etc/connman
+cat > /etc/connman/main.conf << 'EOF'
+[General]
+PreferredTechnologies = wifi,ethernet
+AllowHostnames = true
+AutoConnect = true
+SingleConnectedTechnology = false
+NetworkInterfaceBlacklist = vmnet,vboxnet,virbr,ifb
+EOF
+
+systemctl restart connman || sv restart connman || true
+
+# ============================================
+# 6. DESACTIVAR OTROS GESTORES DE VENTANAS
 # ============================================
 info "Desactivando otros gestores de ventanas..."
 for wm in icewm fluxbox jwm; do
@@ -247,9 +219,19 @@ for wm in icewm fluxbox jwm; do
 done
 
 # ============================================
-# 8. CONFIGURAR AUTO-LOGIN
+# 7. CONFIGURAR AUTO-LOGIN (GRÁFICO DIRECTO)
 # ============================================
-info "Configurando auto-login..."
+info "Configurando auto-login para iniciar directamente en la terminal..."
+
+# Crear archivo de sesión Openbox
+mkdir -p /usr/share/xsessions
+cat > /usr/share/xsessions/openbox.desktop << 'EOF'
+[Desktop Entry]
+Name=Openbox
+Comment=Openbox Window Manager
+Exec=openbox-session
+Type=Application
+EOF
 
 # LightDM
 if [ -f /etc/lightdm/lightdm.conf ]; then
@@ -260,6 +242,7 @@ autologin-user=$TARGET_USER
 autologin-session=openbox
 user-session=openbox
 EOF
+    info "LightDM configurado con auto-login."
 fi
 
 # SDDM
@@ -270,11 +253,27 @@ if [ -f /etc/sddm.conf ]; then
 User=$TARGET_USER
 Session=openbox.desktop
 EOF
+    info "SDDM configurado con auto-login."
 fi
 
-# Si no hay gestor de display
+# LXDM
+if [ -f /etc/lxdm/lxdm.conf ]; then
+    sed -i "s/^# autologin=.*/autologin=$TARGET_USER/" /etc/lxdm/lxdm.conf
+    sed -i "s/^# session=.*/session=\/usr\/share\/xsessions\/openbox.desktop/" /etc/lxdm/lxdm.conf
+    info "LXDM configurado con auto-login."
+fi
+
+# SLiM
+if [ -f /etc/slim.conf ]; then
+    echo "default_user $TARGET_USER" >> /etc/slim.conf
+    echo "auto_login yes" >> /etc/slim.conf
+    echo "session openbox" >> /etc/slim.conf
+    info "SLiM configurado con auto-login."
+fi
+
+# Fallback: auto-login en consola (si no hay gestor de display)
 if ! pgrep -x "lightdm|sddm|lxdm|slim" >/dev/null 2>&1; then
-    warn "No se detectó gestor de display. Configurando auto-login en consola."
+    warn "No se detectó gestor de display. Configurando auto-login en consola..."
     mkdir -p /etc/systemd/system/getty@tty1.service.d
     cat > /etc/systemd/system/getty@tty1.service.d/autologin.conf << EOF
 [Service]
@@ -290,24 +289,29 @@ EOF
 fi
 
 # ============================================
-# 9. CREAR SCRIPTS XONI
+# 8. CREAR SCRIPTS XONI (OPTIMIZADOS)
 # ============================================
 info "Creando scripts XONI..."
 
 cat > /usr/local/bin/xoni-install << 'EOF'
 #!/bin/bash
+# Instalador automático de herramientas XONI
 REPO_BASE="https://github.com/XONIDU"
 cd "$HOME"
 TOOL="${1:-}"
 if [ -z "$TOOL" ]; then
     echo "Herramientas: xonitube, xonigraf, xonichat, xonimail"
-    read -p "Herramienta: " TOOL
+    read -p "Instalar: " TOOL
 fi
 if [ -n "$TOOL" ]; then
     [ -d "$TOOL" ] || git clone "$REPO_BASE/$TOOL.git"
-    [ -f "$TOOL/start.py" ] && sudo ln -sf "$HOME/$TOOL/start.py" "/usr/local/bin/$TOOL"
-    sudo chmod +x "/usr/local/bin/$TOOL"
-    echo "[OK] $TOOL"
+    if [ -f "$TOOL/start.py" ]; then
+        sudo ln -sf "$HOME/$TOOL/start.py" "/usr/local/bin/$TOOL"
+        sudo chmod +x "/usr/local/bin/$TOOL"
+        echo "[OK] $TOOL instalado (comando: $TOOL)"
+    else
+        echo "[AVISO] Repositorio descargado en ~/$TOOL"
+    fi
 fi
 EOF
 
@@ -316,11 +320,11 @@ cat > /usr/local/bin/xoni-menu << 'EOF'
 while true; do
     clear
     echo "============================="
-    echo "    XONIANT32 - MENÚ"
+    echo "  XONIANT32 ULTIMATE - MENÚ"
     echo "============================="
     echo "1) Nueva terminal"
-    echo "2) Instalar herramienta"
-    echo "3) Configurar red"
+    echo "2) Instalar herramienta XONI"
+    echo "3) Configurar red (connman)"
     echo "4) Cerrar sesión"
     read -p "Opción: " opt
     case $opt in
@@ -335,17 +339,34 @@ EOF
 cat > /usr/local/bin/xoni-help << 'EOF'
 #!/bin/bash
 cat << 'HELP'
-Sistema XONIANT32 - Terminal Fija
-Comandos: xoni-menu, xoni-install <tool>
-Win+x: Menú | Win+t: Nueva terminal | Win+q: Salir
+========================================
+   XONIANT32 ULTIMATE - AYUDA
+========================================
+COMANDOS:
+  xoni-menu     : Menú interactivo
+  xoni-install  : Instalar herramientas (ej: xoni-install xonitube)
+  sudo connmanctl : Configurar WiFi
+
+ATAJOS (en Openbox):
+  Win + x   : Menú
+  Win + t   : Nueva terminal
+  Win + h   : Ayuda
+  Win + q   : Cerrar sesión
+
+La terminal principal ocupa TODA la pantalla.
+El escritorio está OCULTO pero los controladores se conservan.
+
+Repositorio: https://github.com/XONIDU/xoniant32
 HELP
 EOF
 
 chmod +x /usr/local/bin/xoni-*
 
+# Mensaje de bienvenida
 cat >> "$USER_HOME/.bashrc" << 'EOF'
 echo "========================================"
-echo "   XONIANT32 - by Darian Alberto Camacho Salas"
+echo "   XONIANT32 ULTIMATE - TERMINAL FIJA"
+echo "   by Darian Alberto Camacho Salas"
 echo "========================================"
 echo "Comandos: xoni-help, xoni-menu, xoni-install"
 echo "Win+x: Menú | Win+t: Terminal | Win+q: Salir"
@@ -355,22 +376,41 @@ EOF
 chown -R "$TARGET_USER":"$TARGET_USER" "$USER_HOME/.config" "$USER_HOME/.xinitrc" "$USER_HOME/.bashrc"
 
 # ============================================
+# 9. LIMPIEZA FINAL
+# ============================================
+info "Eliminando dependencias no usadas..."
+apt autoremove --purge -y
+
+info "Limpiando caché..."
+apt clean
+apt autoclean
+
+# ============================================
 # 10. FINALIZACIÓN
 # ============================================
 echo "========================================"
-echo "   INSTALACIÓN COMPLETADA               "
+echo "   INSTALACIÓN ULTIMATE COMPLETADA      "
 echo "========================================"
 echo ""
-echo "Resumen:"
-echo "✓ Terminal fija configurada (oculta el escritorio)"
-if [ -n "$(apt list --installed 2>/dev/null | grep -E 'cups|bluez|wicd')" ]; then
-    echo "✓ Se eliminaron algunos paquetes según tus respuestas"
-else
-    echo "✓ No se eliminaron paquetes adicionales"
-fi
+echo "✅ Se eliminaron automáticamente:"
+echo "   - Impresión, Bluetooth, Wicd, Scanner"
+echo "   - Juegos, otros gestores de ventanas"
 echo ""
-echo "Al reiniciar, SOLO VERÁS LA TERMINAL."
+echo "✅ Se conservaron:"
+echo "   - Controladores de video, audio, red, WiFi"
+echo "   - Xorg, ALSA, PulseAudio"
+echo ""
+echo "✅ Configuración final:"
+echo "   - Terminal fija que OCULTA el escritorio"
+echo "   - Auto-login directo a Openbox"
+echo "   - mpv optimizado para XoniTube v5.5 (640x360)"
+echo "   - Scripts XONI instalados"
+echo ""
+echo "▶ Para instalar xonitube:  xoni-install xonitube"
+echo "▶ Para abrir el menú:        xoni-menu"
+echo "▶ Para ayuda:                xoni-help"
 echo ""
 echo "Reinicia ahora: sudo reboot"
-echo "Usuario: $TARGET_USER"
 echo ""
+echo "Usuario: $TARGET_USER"
+echo "========================================"
