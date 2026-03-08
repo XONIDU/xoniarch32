@@ -1,13 +1,14 @@
 #!/bin/bash
-# install-xoniant32-ultimate.sh – Terminal fija ULTIMATE (sin preguntas)
+# install-xoniant32-ultimate.sh – Terminal fija ULTIMATE (con atajos completos)
 # Autor: Darian Alberto Camacho Salas
 #
 # Este script:
 # 1. ELIMINA AUTOMÁTICAMENTE paquetes innecesarios (sin preguntar)
 # 2. CONSERVA gráficos, audio, video, WiFi y Bluetooth (controladores)
 # 3. CONFIGURA Openbox con terminal fija que OCULTA EL ESCRITORIO
-# 4. Optimizado para XoniTube v5.5 (tamaño de ventana 640x360)
-# 5. Máxima compatibilidad con hardware de 32 bits (ASUS Eee PC 900)
+# 4. AÑADE ATAJOS DE TECLADO COMPLETOS (Alt+Tab, Ctrl+Alt+T, etc.)
+# 5. Optimizado para XoniTube v5.5 (tamaño de ventana 640x360)
+# 6. Máxima compatibilidad con hardware de 32 bits (ASUS Eee PC 900)
 
 set -euo pipefail
 trap 'echo -e "\033[0;31m[ERROR] Falló en la línea $LINENO\033[0m" >&2' ERR
@@ -38,7 +39,7 @@ echo "   by Darian Alberto Camacho Salas     "
 echo "========================================"
 echo "Este script ELIMINA AUTOMÁTICAMENTE:"
 echo "  - Impresión (CUPS)"
-echo "  - Bluetooth"
+echo "  - Bluetooth (solo servicios)"
 echo "  - Wicd (gestor alternativo)"
 echo "  - Scanner (saned)"
 echo "  - Juegos preinstalados"
@@ -46,9 +47,16 @@ echo "  - Otros gestores (icewm, fluxbox, jwm)"
 echo ""
 echo "CONSERVA:"
 echo "  - Controladores de video, audio, red"
-echo "  - WiFi y Bluetooth (solo drivers, no servicios)"
+echo "  - WiFi y Bluetooth (drivers)"
 echo "  - Xorg completo"
 echo "  - ALSA + PulseAudio"
+echo ""
+echo "AÑADE ATAJOS DE TECLADO:"
+echo "  - Alt+Tab : Cambiar entre ventanas"
+echo "  - Alt+F4  : Cerrar ventana"
+echo "  - Ctrl+Alt+T : Nueva terminal"
+echo "  - Win+x   : Menú principal"
+echo "  - Win+q   : Cerrar sesión"
 echo ""
 echo "INICIARÁ DIRECTAMENTE EN TERMINAL (sin escritorio)"
 echo "========================================"
@@ -88,7 +96,7 @@ apt update
 info "Instalando paquetes esenciales..."
 apt install -y git curl wget htop nano alsa-utils pulseaudio pavucontrol
 apt install -y xorg xserver-xorg-core xserver-xorg-video-fbdev xserver-xorg-video-vesa
-apt install -y openbox rxvt-unicode
+apt install -y openbox obconf rxvt-unicode
 apt install -y mpv yt-dlp ffmpeg
 apt install -y firmware-atheros firmware-iwlwifi firmware-realtek || true
 
@@ -127,9 +135,9 @@ cp /etc/mpv/mpv.conf "$USER_HOME/.config/mpv/"
 chown -R "$TARGET_USER":"$TARGET_USER" "$USER_HOME/.config/mpv"
 
 # ============================================
-# 4. CONFIGURAR OPENBOX (TERMINAL FIJA QUE OCULTA TODO)
+# 4. CONFIGURAR OPENBOX (TERMINAL FIJA + ATAJOS)
 # ============================================
-info "Configurando Openbox con terminal fija que OCULTA EL ESCRITORIO..."
+info "Configurando Openbox con terminal fija y atajos completos..."
 
 mkdir -p "$USER_HOME/.config/openbox"
 
@@ -149,13 +157,47 @@ cat > "$USER_HOME/.config/openbox/rc.xml" << 'EOF'
       </position>
     </application>
   </applications>
+  
   <menu><file>~/.config/openbox/menu.xml</file></menu>
+  
   <keyboard>
-    <keybind key="W-x"><action name="Execute"><command>xoni-menu</command></action></keybind>
-    <keybind key="W-t"><action name="Execute"><command>urxvt</command></action></keybind>
-    <keybind key="W-h"><action name="Execute"><command>xoni-help</command></action></keybind>
-    <keybind key="W-q"><action name="Exit"/></keybind>
+    <!-- Atajos básicos de escritorio -->
+    <keybind key="A-Tab">
+      <action name="NextWindow"/>
+    </keybind>
+    <keybind key="A-S-Tab">
+      <action name="PreviousWindow"/>
+    </keybind>
+    <keybind key="A-F4">
+      <action name="Close"/>
+    </keybind>
+    
+    <!-- Atajos personalizados Xoniant32 -->
+    <keybind key="W-x">
+      <action name="Execute"><command>xoni-menu</command></action>
+    </keybind>
+    <keybind key="W-t">
+      <action name="Execute"><command>urxvt</command></action>
+    </keybind>
+    <keybind key="C-A-t">
+      <action name="Execute"><command>urxvt</command></action>
+    </keybind>
+    <keybind key="W-h">
+      <action name="Execute"><command>xoni-help</command></action>
+    </keybind>
+    <keybind key="W-q">
+      <action name="Exit"/>
+    </keybind>
+    
+    <!-- Cambiar entre escritorios virtuales -->
+    <keybind key="C-A-Left">
+      <action name="GoToDesktop"><to>left</to></action>
+    </keybind>
+    <keybind key="C-A-Right">
+      <action name="GoToDesktop"><to>right</to></action>
+    </keybind>
   </keyboard>
+  
   <mouse>
     <context name="Root">
       <mousebind button="Right" action="Press">
@@ -166,15 +208,28 @@ cat > "$USER_HOME/.config/openbox/rc.xml" << 'EOF'
 </openbox_config>
 EOF
 
-# Menú mínimo
+# Menú completo
 cat > "$USER_HOME/.config/openbox/menu.xml" << 'EOF'
 <?xml version="1.0" encoding="utf-8"?>
 <openbox_menu>
   <menu id="root-menu" label="Xoniant32 Ultimate">
-    <item label="Nueva terminal"><action name="Execute"><command>urxvt</command></action></item>
-    <item label="Instalar herramienta XONI"><action name="Execute"><command>urxvt -e xoni-install</command></action></item>
-    <item label="Configurar red"><action name="Execute"><command>urxvt -e sudo connmanctl</command></action></item>
-    <item label="Cerrar sesión"><action name="Exit"/></item>
+    <item label="Nueva terminal (Ctrl+Alt+T)">
+      <action name="Execute"><command>urxvt</command></action>
+    </item>
+    <separator/>
+    <item label="Instalar herramienta XONI">
+      <action name="Execute"><command>urxvt -e xoni-install</command></action>
+    </item>
+    <item label="Configurar red (connman)">
+      <action name="Execute"><command>urxvt -e sudo connmanctl</command></action>
+    </item>
+    <separator/>
+    <item label="Ayuda">
+      <action name="Execute"><command>xoni-help</command></action>
+    </item>
+    <item label="Cerrar sesión (Win+q)">
+      <action name="Exit"/>
+    </item>
   </menu>
 </openbox_menu>
 EOF
@@ -322,16 +377,19 @@ while true; do
     echo "============================="
     echo "  XONIANT32 ULTIMATE - MENÚ"
     echo "============================="
-    echo "1) Nueva terminal"
+    echo "1) Nueva terminal (Ctrl+Alt+T)"
     echo "2) Instalar herramienta XONI"
     echo "3) Configurar red (connman)"
-    echo "4) Cerrar sesión"
+    echo "4) Ayuda"
+    echo "5) Cerrar sesión (Win+q)"
+    echo ""
     read -p "Opción: " opt
     case $opt in
         1) urxvt ;;
         2) urxvt -e xoni-install ; read -p "Enter..." ;;
         3) urxvt -e sudo connmanctl ;;
-        4) openbox --exit ;;
+        4) xoni-help ; read -p "Enter..." ;;
+        5) openbox --exit ;;
     esac
 done
 EOF
@@ -347,11 +405,13 @@ COMANDOS:
   xoni-install  : Instalar herramientas (ej: xoni-install xonitube)
   sudo connmanctl : Configurar WiFi
 
-ATAJOS (en Openbox):
-  Win + x   : Menú
-  Win + t   : Nueva terminal
-  Win + h   : Ayuda
-  Win + q   : Cerrar sesión
+ATAJOS DE TECLADO (en Openbox):
+  Alt+Tab       : Cambiar entre ventanas
+  Alt+F4        : Cerrar ventana actual
+  Ctrl+Alt+T    : Nueva terminal
+  Win+x         : Abrir menú
+  Win+q         : Cerrar sesión
+  Ctrl+Alt+←/→  : Cambiar escritorio virtual
 
 La terminal principal ocupa TODA la pantalla.
 El escritorio está OCULTO pero los controladores se conservan.
@@ -369,7 +429,13 @@ echo "   XONIANT32 ULTIMATE - TERMINAL FIJA"
 echo "   by Darian Alberto Camacho Salas"
 echo "========================================"
 echo "Comandos: xoni-help, xoni-menu, xoni-install"
-echo "Win+x: Menú | Win+t: Terminal | Win+q: Salir"
+echo ""
+echo "ATAJOS DE TECLADO:"
+echo "  Alt+Tab     : Cambiar ventana"
+echo "  Alt+F4      : Cerrar ventana"
+echo "  Ctrl+Alt+T  : Nueva terminal"
+echo "  Win+x       : Menú"
+echo "  Win+q       : Cerrar sesión"
 echo "========================================"
 EOF
 
@@ -400,11 +466,15 @@ echo "✅ Se conservaron:"
 echo "   - Controladores de video, audio, red, WiFi"
 echo "   - Xorg, ALSA, PulseAudio"
 echo ""
-echo "✅ Configuración final:"
-echo "   - Terminal fija que OCULTA el escritorio"
-echo "   - Auto-login directo a Openbox"
-echo "   - mpv optimizado para XoniTube v5.5 (640x360)"
-echo "   - Scripts XONI instalados"
+echo "✅ ATAJOS DE TECLADO CONFIGURADOS:"
+echo "   - Alt+Tab     : Cambiar ventana"
+echo "   - Alt+F4      : Cerrar ventana"
+echo "   - Ctrl+Alt+T  : Nueva terminal"
+echo "   - Win+x       : Menú"
+echo "   - Win+q       : Cerrar sesión"
+echo ""
+echo "✅ Terminal fija que OCULTA el escritorio"
+echo "✅ mpv optimizado para XoniTube v5.5"
 echo ""
 echo "▶ Para instalar xonitube:  xoni-install xonitube"
 echo "▶ Para abrir el menú:        xoni-menu"
