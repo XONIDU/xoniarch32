@@ -1,17 +1,20 @@
 #!/bin/bash
-# install-xoniant32-ultimate.sh – Terminal fija con copiar/pegar y teclas FN
+# install-xoniant32-ultimate.sh – Terminal fija con ventanas emergentes y soporte completo
 # Autor: Darian Alberto Camacho Salas
 #
 # Este script:
 # 1. ELIMINA AUTOMÁTICAMENTE paquetes innecesarios
-# 2. CONSERVA controladores gráficos, audio, video, WiFi
+# 2. CONSERVA controladores gráficos, audio, video, WiFi y Bluetooth
 # 3. CONFIGURA Openbox con terminal fija que OCULTA EL ESCRITORIO
-# 4. AÑADE SOPORTE PARA:
-#    - Click derecho para pegar texto (clipboard)
-#    - Teclas FN (volumen, brillo) funcionando
-#    - Atajos completos (Alt+Tab, Ctrl+Alt+T, Win+x, Win+q)
-# 5. PERMITE que ventanas emergentes se vean SOBRE la terminal
-# 6. BLOQUEA el cierre de la terminal principal
+# 4. PERMITE que ventanas emergentes se vean SOBRE la terminal (superposición)
+# 5. BLOQUEA el cierre de la terminal principal (sin botón X, sin Alt+F4)
+# 6. AÑADE SOPORTE COMPLETO de ratón y teclado:
+#    - Click derecho para PEGAR texto
+#    - Selección automática para COPIAR
+#    - Atajos Ctrl+Shift+C/V, Ctrl+Insert/Shift+Insert
+#    - Maximizar ventanas con Alt+F10 o Win+↑
+#    - Cerrar ventanas con Alt+F4 (excepto la principal)
+# 7. Optimizado para XoniTube v5.5 (tamaño de ventana 640x360)
 
 set -euo pipefail
 trap 'echo -e "\033[0;31m[ERROR] Falló en la línea $LINENO\033[0m" >&2' ERR
@@ -48,12 +51,12 @@ echo "  - Scanner (saned)"
 echo "  - Juegos preinstalados"
 echo "  - Otros gestores (icewm, fluxbox, jwm)"
 echo ""
-echo "AÑADE SOPORTE PARA:"
-echo "  ✓ Click derecho para PEGAR texto"
-echo "  ✓ Teclas FN (volumen, brillo)"
-echo "  ✓ Atajos completos (Alt+Tab, Ctrl+Alt+T)"
-echo "  ✓ Ventanas emergentes sobre la terminal"
-echo "  ✓ Terminal principal NO SE PUEDE CERRAR"
+echo "AÑADE SOPORTE COMPLETO:"
+echo "  ✓ Click derecho para PEGAR"
+echo "  ✓ Seleccionar texto para COPIAR automáticamente"
+echo "  ✓ Atajos: Ctrl+Shift+C/V, Ctrl+Insert/Shift+Insert"
+echo "  ✓ Maximizar ventanas: Alt+F10, Win+↑"
+echo "  ✓ Cerrar ventanas: Alt+F4"
 echo ""
 echo "INICIARÁ DIRECTAMENTE EN TERMINAL (sin escritorio)"
 echo "========================================"
@@ -96,52 +99,13 @@ apt install -y xorg xserver-xorg-core xserver-xorg-video-fbdev xserver-xorg-vide
 apt install -y openbox obconf rxvt-unicode
 apt install -y mpv yt-dlp ffmpeg
 apt install -y firmware-atheros firmware-iwlwifi firmware-realtek || true
-apt install -y xdotool xsel xclip   # Herramientas para clipboard y X
+apt install -y xclip xsel        # Herramientas de portapapeles
 
 # Controladores Intel (opcional, pero recomendado para Eee PC)
 apt install -y xserver-xorg-video-intel || true
 
 # ============================================
-# 3. CONFIGURAR TECLADO Y TECLAS FN
-# ============================================
-info "Configurando teclado y teclas FN..."
-mkdir -p /etc/X11/xorg.conf.d
-
-# Configuración para que las teclas FN funcionen correctamente
-cat > /etc/X11/xorg.conf.d/30-keyboard.conf << 'EOF'
-Section "InputClass"
-    Identifier "system-keyboard"
-    MatchIsKeyboard "on"
-    Option "XkbLayout" "es"
-    Option "XkbModel" "pc105"
-    Option "XkbOptions" "terminate:ctrl_alt_bksp"
-EndSection
-EOF
-
-# Asegurar que los atajos multimedia funcionen
-mkdir -p /etc/acpi/events
-
-# Configurar teclas de volumen
-cat > /etc/acpi/events/volume-up << 'EOF'
-event=button/volumeup
-action=/usr/bin/amixer set Master 5%+
-EOF
-
-cat > /etc/acpi/events/volume-down << 'EOF'
-event=button/volumedown
-action=/usr/bin/amixer set Master 5%-
-EOF
-
-cat > /etc/acpi/events/volume-mute << 'EOF'
-event=button/mute
-action=/usr/bin/amixer set Master toggle
-EOF
-
-# Reiniciar acpid para que tome los cambios
-systemctl restart acpid || sv restart acpid || true
-
-# ============================================
-# 4. CONFIGURAR MPV (optimizado para 1GB RAM)
+# 3. CONFIGURAR MPV (optimizado para 1GB RAM)
 # ============================================
 info "Configurando mpv para bajo consumo de recursos..."
 mkdir -p /etc/mpv
@@ -165,13 +129,17 @@ ontop                    # Siempre visible sobre otras ventanas
 msg-level=all=error
 EOF
 
-# ============================================
-# 5. CONFIGURAR URXVT (CLICK DERECHO PARA PEGAR)
-# ============================================
-info "Configurando urxvt con click derecho para pegar..."
-
+# Configuración para el usuario
 TARGET_USER="${SUDO_USER:-$USER}"
 USER_HOME="/home/$TARGET_USER"
+mkdir -p "$USER_HOME/.config/mpv"
+cp /etc/mpv/mpv.conf "$USER_HOME/.config/mpv/"
+chown -R "$TARGET_USER":"$TARGET_USER" "$USER_HOME/.config/mpv"
+
+# ============================================
+# 4. CONFIGURAR URXVT (COPIA/PEGA CON RATÓN)
+# ============================================
+info "Configurando urxvt con soporte de portapapeles..."
 
 # Crear directorio para extensiones Perl de urxvt
 mkdir -p "$USER_HOME/.urxvt/ext"
@@ -236,9 +204,9 @@ EOF
 chown "$TARGET_USER":"$TARGET_USER" "$USER_HOME/.Xresources"
 
 # ============================================
-# 6. CONFIGURAR OPENBOX (TERMINAL FIJA + SUPERPOSICIÓN)
+# 5. CONFIGURAR OPENBOX (TERMINAL FIJA + ATAJOS COMPLETOS)
 # ============================================
-info "Configurando Openbox con terminal fija y superposición de ventanas..."
+info "Configurando Openbox con terminal fija y atajos completos..."
 
 mkdir -p "$USER_HOME/.config/openbox"
 
@@ -283,6 +251,12 @@ cat > "$USER_HOME/.config/openbox/rc.xml" << 'EOF'
     </keybind>
     <keybind key="A-F4">
       <action name="Close"/>
+    </keybind>
+    <keybind key="A-F10">
+      <action name="ToggleMaximize"/>
+    </keybind>
+    <keybind key="W-Up">
+      <action name="ToggleMaximize"/>
     </keybind>
     
     <!-- Atajos personalizados Xoniant32 -->
@@ -363,7 +337,7 @@ EOF
 chmod +x "$USER_HOME/.xinitrc"
 
 # ============================================
-# 7. CONFIGURAR CONNMAN (WiFi)
+# 6. CONFIGURAR CONNMAN (WiFi)
 # ============================================
 info "Configurando connman (gestor de red liviano)..."
 apt install -y connman
@@ -380,7 +354,7 @@ EOF
 systemctl restart connman || sv restart connman || true
 
 # ============================================
-# 8. DESACTIVAR OTROS GESTORES DE VENTANAS
+# 7. DESACTIVAR OTROS GESTORES DE VENTANAS
 # ============================================
 info "Desactivando otros gestores de ventanas..."
 for wm in icewm fluxbox jwm; do
@@ -390,7 +364,7 @@ for wm in icewm fluxbox jwm; do
 done
 
 # ============================================
-# 9. CONFIGURAR AUTO-LOGIN (GRÁFICO DIRECTO)
+# 8. CONFIGURAR AUTO-LOGIN (GRÁFICO DIRECTO)
 # ============================================
 info "Configurando auto-login para iniciar directamente en la terminal..."
 
@@ -460,7 +434,7 @@ EOF
 fi
 
 # ============================================
-# 10. CREAR SCRIPTS XONI
+# 9. CREAR SCRIPTS XONI (OPTIMIZADOS)
 # ============================================
 info "Creando scripts XONI..."
 
@@ -524,17 +498,21 @@ COMANDOS:
 ATAJOS DE TECLADO:
   Alt+Tab       : Cambiar entre ventanas
   Alt+F4        : Cerrar ventana actual
+  Alt+F10       : Maximizar/restaurar ventana
+  Win+↑         : Maximizar ventana
   Ctrl+Alt+T    : Nueva terminal (emergente, encima de la principal)
   Win+x         : Abrir menú
   Win+q         : Cerrar sesión
 
 RATÓN:
-  Click derecho : Pegar texto (desde portapapeles)
+  Seleccionar texto : Copia automáticamente
+  Click derecho     : Pegar texto
 
-TECLAS FN:
-  Subir volumen : FN+F6 (depende del teclado)
-  Bajar volumen : FN+F5
-  Silenciar    : FN+F4
+COPIAR/PEGAR:
+  Ctrl+Shift+C  : Copiar selección
+  Ctrl+Shift+V  : Pegar
+  Ctrl+Insert   : Copiar
+  Shift+Insert  : Pegar
 
 CARACTERÍSTICAS ESPECIALES:
   ✓ La terminal principal NO SE PUEDE CERRAR
@@ -557,12 +535,18 @@ echo "Comandos: xoni-help, xoni-menu, xoni-install"
 echo ""
 echo "ATAJOS DE TECLADO:"
 echo "  Alt+Tab     : Cambiar ventana"
+echo "  Alt+F4      : Cerrar ventana"
+echo "  Alt+F10     : Maximizar"
+echo "  Win+↑       : Maximizar"
 echo "  Ctrl+Alt+T  : Nueva terminal"
 echo "  Win+x       : Menú"
 echo "  Win+q       : Cerrar sesión"
 echo ""
-echo "RATÓN: Click derecho para PEGAR"
-echo "TECLAS FN: Volumen, brillo configurados"
+echo "RATÓN: Seleccionar copia, click derecho pega"
+echo "COPIAR/PEGAR: Ctrl+Shift+C/V, Ctrl+Insert/Shift+Insert"
+echo ""
+echo "✓ Terminal principal NO SE PUEDE CERRAR"
+echo "✓ Ventanas emergentes se ven ENCIMA"
 echo "========================================"
 EOF
 
@@ -570,7 +554,7 @@ chown -R "$TARGET_USER":"$TARGET_USER" "$USER_HOME/.config" "$USER_HOME/.xinitrc
 chown -R "$TARGET_USER":"$TARGET_USER" "$USER_HOME/.Xresources" "$USER_HOME/.urxvt"
 
 # ============================================
-# 11. LIMPIEZA FINAL
+# 10. LIMPIEZA FINAL
 # ============================================
 info "Eliminando dependencias no usadas..."
 apt autoremove --purge -y
@@ -580,7 +564,7 @@ apt clean
 apt autoclean
 
 # ============================================
-# 12. FINALIZACIÓN
+# 11. FINALIZACIÓN
 # ============================================
 echo "========================================"
 echo "   INSTALACIÓN ULTIMATE COMPLETADA      "
@@ -588,10 +572,9 @@ echo "========================================"
 echo ""
 echo "✅ CARACTERÍSTICAS ESPECIALES:"
 echo "   ✓ Terminal principal NO SE PUEDE CERRAR"
-echo "   ✓ Click derecho para PEGAR texto"
-echo "   ✓ Teclas FN configuradas (volumen, brillo)"
 echo "   ✓ Ventanas emergentes se ven ENCIMA"
-echo "   ✓ Atajos de teclado completos"
+echo "   ✓ Atajos completos de teclado"
+echo "   ✓ Soporte de ratón: seleccionar copia, click derecho pega"
 echo ""
 echo "✅ Para instalar xonitube:  xoni-install xonitube"
 echo "✅ Para abrir el menú:        xoni-menu"
