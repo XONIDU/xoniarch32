@@ -42,17 +42,17 @@ Puedes descargar el script de instalación usando cualquiera de estos métodos:
 ### Opción 1: con `wget`
 
 ```bash
-wget -O install-xoniant32-ultimate.sh https://raw.githubusercontent.com/XONIDU/xoniant32/main/install-xoniant32-ultimate.sh
-chmod +x install-xoniant32-ultimate.sh
-sudo ./install-xoniant32-ultimate.sh
+wget -O install-xoniant32.sh https://raw.githubusercontent.com/XONIDU/xoniant32/main/install-xoniant32.sh
+chmod +x install-xoniant32.sh
+sudo ./install-xoniant32.sh
 ```
 
 ### Opción 2: con `curl`
 
 ```bash
-curl -L -o install-xoniant32-ultimate.sh https://raw.githubusercontent.com/XONIDU/xoniant32/main/install-xoniant32-ultimate.sh
-chmod +x install-xoniant32-ultimate.sh
-sudo ./install-xoniant32-ultimate.sh
+curl -L -o install-xoniant32.sh https://raw.githubusercontent.com/XONIDU/xoniant32/main/install-xoniant32.sh
+chmod +x install-xoniant32.sh
+sudo ./install-xoniant32.sh
 ```
 
 ### Opción 3: con `git` (clonando el repositorio)
@@ -60,8 +60,8 @@ sudo ./install-xoniant32-ultimate.sh
 ```bash
 git clone https://github.com/XONIDU/xoniant32.git
 cd xoniant32
-chmod +x install-xoniant32-ultimate.sh
-sudo ./install-xoniant32-ultimate.sh
+chmod +x install-xoniant32.sh
+sudo ./install-xoniant32.sh
 ```
 
 El script te pedirá confirmación una vez y luego hará todo automáticamente.
@@ -216,7 +216,7 @@ sudo systemctl restart lightdm   # o sddm/lxdm/slim
 
 ```
 xoniant32/
-├── install-xoniant32-ultimate.sh   # Script principal de instalación (versión Ultimate)
+├── install-xoniant32.sh   # Script principal de instalación (versión Ultimate)
 ├── install-xoniant32.sh            # Script original (con purga de paquetes)
 ├── README.md                       # Este archivo
 └── .gitignore                      # Archivos ignorados
