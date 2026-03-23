@@ -1,20 +1,14 @@
 #!/bin/bash
-# install-xoniant32-ultimate.sh – Terminal fija con ventanas emergentes y soporte completo
+# install-xoniant32-ultimate.sh – Terminal fija (SIN ELIMINAR PAQUETES)
 # Autor: Darian Alberto Camacho Salas
 #
 # Este script:
-# 1. ELIMINA AUTOMÁTICAMENTE paquetes innecesarios
-# 2. CONSERVA controladores gráficos, audio, video, WiFi y Bluetooth
-# 3. CONFIGURA Openbox con terminal fija que OCULTA EL ESCRITORIO
-# 4. PERMITE que ventanas emergentes se vean SOBRE la terminal (superposición)
-# 5. BLOQUEA el cierre de la terminal principal (sin botón X, sin Alt+F4)
-# 6. AÑADE SOPORTE COMPLETO de ratón y teclado:
-#    - Click derecho para PEGAR texto
-#    - Selección automática para COPIAR
-#    - Atajos Ctrl+Shift+C/V, Ctrl+Insert/Shift+Insert
-#    - Maximizar ventanas con Alt+F10 o Win+↑
-#    - Cerrar ventanas con Alt+F4 (excepto la principal)
-# 7. Optimizado para XoniTube v5.5 (tamaño de ventana 640x360)
+# 1. NO ELIMINA NINGÚN PAQUETE (conserva todo el sistema antiX original)
+# 2. CONFIGURA Openbox con terminal fija que OCULTA EL ESCRITORIO
+# 3. PERMITE que ventanas emergentes (mpv, nuevas terminales) se vean SOBRE la terminal
+# 4. BLOQUEA el cierre de la terminal principal (sin botón X, sin Alt+F4)
+# 5. AÑADE SOPORTE COMPLETO de ratón y teclado
+# 6. Optimizado para XoniTube v5.5 (tamaño de ventana 640x360)
 
 set -euo pipefail
 trap 'echo -e "\033[0;31m[ERROR] Falló en la línea $LINENO\033[0m" >&2' ERR
@@ -43,20 +37,14 @@ echo "========================================"
 echo "   XONIANT32 ULTIMATE - TERMINAL FIJA  "
 echo "   by Darian Alberto Camacho Salas     "
 echo "========================================"
-echo "Este script ELIMINA AUTOMÁTICAMENTE:"
-echo "  - Impresión (CUPS)"
-echo "  - Bluetooth (solo servicios)"
-echo "  - Wicd (gestor alternativo)"
-echo "  - Scanner (saned)"
-echo "  - Juegos preinstalados"
-echo "  - Otros gestores (icewm, fluxbox, jwm)"
+echo "Este script NO ELIMINA NINGÚN PAQUETE."
+echo "Conserva TODO el sistema antiX original."
 echo ""
-echo "AÑADE SOPORTE COMPLETO:"
+echo "SOLO CONFIGURA:"
+echo "  ✓ Openbox con terminal fija"
 echo "  ✓ Click derecho para PEGAR"
-echo "  ✓ Seleccionar texto para COPIAR automáticamente"
-echo "  ✓ Atajos: Ctrl+Shift+C/V, Ctrl+Insert/Shift+Insert"
-echo "  ✓ Maximizar ventanas: Alt+F10, Win+↑"
-echo "  ✓ Cerrar ventanas: Alt+F4"
+echo "  ✓ Atajos: Ctrl+Shift+C/V, Alt+Tab, Alt+F4, Win+x, Win+q"
+echo "  ✓ Ventanas emergentes sobre la terminal"
 echo ""
 echo "INICIARÁ DIRECTAMENTE EN TERMINAL (sin escritorio)"
 echo "========================================"
@@ -65,44 +53,16 @@ read -p "¿Continuar? (s/n): " CONFIRM
 [[ "$CONFIRM" =~ ^[Ss]$ ]] || error_exit "Operación cancelada."
 
 # ============================================
-# 1. ELIMINAR PAQUETES INNECESARIOS
-# ============================================
-info "Eliminando paquetes innecesarios (para liberar RAM y disco)..."
-
-# Impresión
-apt purge -y cups cups-client cups-common cups-filters cups-ppdc || true
-
-# Bluetooth (servicios, no drivers)
-apt purge -y bluez bluetooth bluez-utils || true
-
-# Gestores de red alternativos
-apt purge -y wicd wicd-gtk wicd-daemon || true
-
-# Scanner
-apt purge -y sane saned sane-utils || true
-
-# Juegos y aplicaciones innecesarias
-apt purge -y gnome-games* aisleriot solitaire || true
-
-# Gestores de ventanas adicionales
-apt purge -y icewm* fluxbox* jwm* || true
-
-# ============================================
-# 2. INSTALAR PAQUETES NECESARIOS
+# 1. ACTUALIZAR REPOSITORIOS (sin eliminar nada)
 # ============================================
 info "Actualizando repositorios..."
 apt update
 
-info "Instalando paquetes esenciales..."
-apt install -y git curl wget htop nano alsa-utils pulseaudio pavucontrol
-apt install -y xorg xserver-xorg-core xserver-xorg-video-fbdev xserver-xorg-video-vesa
-apt install -y openbox obconf rxvt-unicode
-apt install -y mpv yt-dlp ffmpeg
-apt install -y firmware-atheros firmware-iwlwifi firmware-realtek || true
-apt install -y xclip xsel        # Herramientas de portapapeles
-
-# Controladores Intel (opcional, pero recomendado para Eee PC)
-apt install -y xserver-xorg-video-intel || true
+# ============================================
+# 2. INSTALAR PAQUETES ADICIONALES (solo si no están)
+# ============================================
+info "Instalando paquetes adicionales (si no están)..."
+apt install -y openbox obconf rxvt-unicode mpv yt-dlp ffmpeg xclip xsel connman
 
 # ============================================
 # 3. CONFIGURAR MPV (optimizado para 1GB RAM)
@@ -114,18 +74,18 @@ cat > /etc/mpv/mpv.conf << 'EOF'
 vo=x11
 ao=alsa
 cache=yes
-cache-secs=15           # Reduce uso de RAM
+cache-secs=15
 profile=fast
 vd-lavc-fast
 vd-lavc-skip-loop-filter=all
 no-sub
 no-osc
 no-osd-bar
-no-window-dragging      # Ahorra CPU
+no-window-dragging
 keepaspect-window
-geometry=640x360        # Tamaño fijo (recomendado para XoniTube v5.5)
+geometry=640x360
 x11-bypass-compositor=yes
-ontop                    # Siempre visible sobre otras ventanas
+ontop
 msg-level=all=error
 EOF
 
@@ -141,11 +101,9 @@ chown -R "$TARGET_USER":"$TARGET_USER" "$USER_HOME/.config/mpv"
 # ============================================
 info "Configurando urxvt con soporte de portapapeles..."
 
-# Crear directorio para extensiones Perl de urxvt
 mkdir -p "$USER_HOME/.urxvt/ext"
 chown -R "$TARGET_USER":"$TARGET_USER" "$USER_HOME/.urxvt"
 
-# Extensión para pegar con click derecho (basada en clipboard-paste-on-right-click)
 cat > "$USER_HOME/.urxvt/ext/clipboard-paste-on-right-click" << 'EOF'
 #! perl
 # clipboard-paste-on-right-click - Extensión para urxvt que permite pegar con click derecho
@@ -153,9 +111,7 @@ cat > "$USER_HOME/.urxvt/ext/clipboard-paste-on-right-click" << 'EOF'
 sub on_button_press {
     my ($self, $event) = @_;
 
-    # Click derecho (botón 3) sin modificadores
     if ($event->{button} == 3 && $event->{state} == 0) {
-        # Obtener contenido del portapapeles
         my $clipboard = `xclip -selection clipboard -o 2>/dev/null`;
         if ($clipboard) {
             $self->tt_paste($clipboard);
@@ -168,35 +124,20 @@ EOF
 
 chown "$TARGET_USER":"$TARGET_USER" "$USER_HOME/.urxvt/ext/clipboard-paste-on-right-click"
 
-# Configuración de Xresources para urxvt
 cat > "$USER_HOME/.Xresources" << 'EOF'
 ! Configuración URxvt para Xoniant32 Ultimate
-
-! Fuente y tamaño
 URxvt.font: xft:monospace:size=10
-
-! Colores
 URxvt.background: black
 URxvt.foreground: white
-
-! Scrollback
 URxvt.scrollBar: false
 URxvt.saveLines: 5000
-
-! Click derecho para pegar (extensión personalizada)
 URxvt.perl-ext-common: default,clipboard-paste-on-right-click
-
-! Atajos de teclado para copiar/pegar
 URxvt.keysym.Shift-Control-C: eval:selection_to_clipboard
 URxvt.keysym.Shift-Control-V: eval:paste_clipboard
 URxvt.keysym.Control-Insert: eval:selection_to_clipboard
 URxvt.keysym.Shift-Insert: eval:paste_clipboard
-
-! Deshabilitar ISO 14755 (para evitar conflictos)
 URxvt.iso14755: false
 URxvt.iso14755_52: false
-
-! Comportamiento de selección
 URxvt.selectStyle: word
 URxvt.letterSpace: 0
 EOF
@@ -220,21 +161,21 @@ cat > "$USER_HOME/.config/openbox/rc.xml" << 'EOF'
       <maximized>yes</maximized>
       <focus>yes</focus>
       <desktop>all</desktop>
-      <layer>below</layer>           <!-- Debajo de otras ventanas -->
+      <layer>below</layer>
       <position force="yes">
         <x>0</x>
         <y>0</y>
       </position>
-      <focus>no</focus>               <!-- No roba foco -->
+      <focus>no</focus>
     </application>
     
     <!-- Ventanas emergentes - SIEMPRE ENCIMA -->
     <application class="URxvt" name="urxvt" title="!principal">
-      <layer>above</layer>             <!-- Encima de la terminal -->
+      <layer>above</layer>
       <focus>yes</focus>
     </application>
     <application class="Mpv">
-      <layer>above</layer>             <!-- Reproductor siempre visible -->
+      <layer>above</layer>
       <focus>yes</focus>
     </application>
   </applications>
@@ -242,47 +183,18 @@ cat > "$USER_HOME/.config/openbox/rc.xml" << 'EOF'
   <menu><file>~/.config/openbox/menu.xml</file></menu>
   
   <keyboard>
-    <!-- Atajos básicos de escritorio -->
-    <keybind key="A-Tab">
-      <action name="NextWindow"/>
-    </keybind>
-    <keybind key="A-S-Tab">
-      <action name="PreviousWindow"/>
-    </keybind>
-    <keybind key="A-F4">
-      <action name="Close"/>
-    </keybind>
-    <keybind key="A-F10">
-      <action name="ToggleMaximize"/>
-    </keybind>
-    <keybind key="W-Up">
-      <action name="ToggleMaximize"/>
-    </keybind>
-    
-    <!-- Atajos personalizados Xoniant32 -->
-    <keybind key="W-x">
-      <action name="Execute"><command>xoni-menu</command></action>
-    </keybind>
-    <keybind key="W-t">
-      <action name="Execute"><command>urxvt</command></action>
-    </keybind>
-    <keybind key="C-A-t">
-      <action name="Execute"><command>urxvt</command></action>
-    </keybind>
-    <keybind key="W-h">
-      <action name="Execute"><command>xoni-help</command></action>
-    </keybind>
-    <keybind key="W-q">
-      <action name="Exit"/>
-    </keybind>
-    
-    <!-- Cambiar entre escritorios virtuales -->
-    <keybind key="C-A-Left">
-      <action name="GoToDesktop"><to>left</to></action>
-    </keybind>
-    <keybind key="C-A-Right">
-      <action name="GoToDesktop"><to>right</to></action>
-    </keybind>
+    <keybind key="A-Tab"><action name="NextWindow"/></keybind>
+    <keybind key="A-S-Tab"><action name="PreviousWindow"/></keybind>
+    <keybind key="A-F4"><action name="Close"/></keybind>
+    <keybind key="A-F10"><action name="ToggleMaximize"/></keybind>
+    <keybind key="W-Up"><action name="ToggleMaximize"/></keybind>
+    <keybind key="W-x"><action name="Execute"><command>xoni-menu</command></action></keybind>
+    <keybind key="W-t"><action name="Execute"><command>urxvt</command></action></keybind>
+    <keybind key="C-A-t"><action name="Execute"><command>urxvt</command></action></keybind>
+    <keybind key="W-h"><action name="Execute"><command>xoni-help</command></action></keybind>
+    <keybind key="W-q"><action name="Exit"/></keybind>
+    <keybind key="C-A-Left"><action name="GoToDesktop"><to>left</to></action></keybind>
+    <keybind key="C-A-Right"><action name="GoToDesktop"><to>right</to></action></keybind>
   </keyboard>
   
   <mouse>
@@ -295,7 +207,6 @@ cat > "$USER_HOME/.config/openbox/rc.xml" << 'EOF'
 </openbox_config>
 EOF
 
-# Menú completo
 cat > "$USER_HOME/.config/openbox/menu.xml" << 'EOF'
 <?xml version="1.0" encoding="utf-8"?>
 <openbox_menu>
@@ -321,7 +232,6 @@ cat > "$USER_HOME/.config/openbox/menu.xml" << 'EOF'
 </openbox_menu>
 EOF
 
-# Autostart - SOLO LA TERMINAL PRINCIPAL
 cat > "$USER_HOME/.config/openbox/autostart" << 'EOF'
 # TERMINAL PRINCIPAL - OCUPA TODA LA PANTALLA (NO SE PUEDE CERRAR)
 urxvt -title "principal" -fg white -bg black &
@@ -340,107 +250,22 @@ chmod +x "$USER_HOME/.xinitrc"
 # 6. CONFIGURAR CONNMAN (WiFi)
 # ============================================
 info "Configurando connman (gestor de red liviano)..."
-apt install -y connman
 mkdir -p /etc/connman
 cat > /etc/connman/main.conf << 'EOF'
 [General]
 PreferredTechnologies = wifi,ethernet
 AllowHostnames = true
 AutoConnect = true
-SingleConnectedTechnology = false
-NetworkInterfaceBlacklist = vmnet,vboxnet,virbr,ifb
 EOF
-
 systemctl restart connman || sv restart connman || true
 
 # ============================================
-# 7. DESACTIVAR OTROS GESTORES DE VENTANAS
-# ============================================
-info "Desactivando otros gestores de ventanas..."
-for wm in icewm fluxbox jwm; do
-    if [ -f "/usr/share/xsessions/$wm.desktop" ]; then
-        mv "/usr/share/xsessions/$wm.desktop" "/usr/share/xsessions/$wm.desktop.disabled" 2>/dev/null || true
-    fi
-done
-
-# ============================================
-# 8. CONFIGURAR AUTO-LOGIN (GRÁFICO DIRECTO)
-# ============================================
-info "Configurando auto-login para iniciar directamente en la terminal..."
-
-# Crear archivo de sesión Openbox
-mkdir -p /usr/share/xsessions
-cat > /usr/share/xsessions/openbox.desktop << 'EOF'
-[Desktop Entry]
-Name=Openbox
-Comment=Openbox Window Manager
-Exec=openbox-session
-Type=Application
-EOF
-
-# LightDM
-if [ -f /etc/lightdm/lightdm.conf ]; then
-    mkdir -p /etc/lightdm/lightdm.conf.d
-    cat > /etc/lightdm/lightdm.conf.d/50-xoniant32.conf << EOF
-[Seat:*]
-autologin-user=$TARGET_USER
-autologin-session=openbox
-user-session=openbox
-EOF
-    info "LightDM configurado con auto-login."
-fi
-
-# SDDM
-if [ -f /etc/sddm.conf ]; then
-    mkdir -p /etc/sddm.conf.d
-    cat > /etc/sddm.conf.d/50-xoniant32.conf << EOF
-[Autologin]
-User=$TARGET_USER
-Session=openbox.desktop
-EOF
-    info "SDDM configurado con auto-login."
-fi
-
-# LXDM
-if [ -f /etc/lxdm/lxdm.conf ]; then
-    sed -i "s/^# autologin=.*/autologin=$TARGET_USER/" /etc/lxdm/lxdm.conf
-    sed -i "s/^# session=.*/session=\/usr\/share\/xsessions\/openbox.desktop/" /etc/lxdm/lxdm.conf
-    info "LXDM configurado con auto-login."
-fi
-
-# SLiM
-if [ -f /etc/slim.conf ]; then
-    echo "default_user $TARGET_USER" >> /etc/slim.conf
-    echo "auto_login yes" >> /etc/slim.conf
-    echo "session openbox" >> /etc/slim.conf
-    info "SLiM configurado con auto-login."
-fi
-
-# Fallback: auto-login en consola (si no hay gestor de display)
-if ! pgrep -x "lightdm|sddm|lxdm|slim" >/dev/null 2>&1; then
-    warn "No se detectó gestor de display. Configurando auto-login en consola..."
-    mkdir -p /etc/systemd/system/getty@tty1.service.d
-    cat > /etc/systemd/system/getty@tty1.service.d/autologin.conf << EOF
-[Service]
-ExecStart=
-ExecStart=-/sbin/agetty --autologin $TARGET_USER --noclear %I 38400 linux
-EOF
-    cat >> "$USER_HOME/.bashrc" << 'EOF'
-if [ -z "$DISPLAY" ] && [ "$(tty)" = "/dev/tty1" ]; then
-    startx
-    exit 0
-fi
-EOF
-fi
-
-# ============================================
-# 9. CREAR SCRIPTS XONI (OPTIMIZADOS)
+# 7. CREAR SCRIPTS XONI
 # ============================================
 info "Creando scripts XONI..."
 
 cat > /usr/local/bin/xoni-install << 'EOF'
 #!/bin/bash
-# Instalador automático de herramientas XONI
 REPO_BASE="https://github.com/XONIDU"
 cd "$HOME"
 TOOL="${1:-}"
@@ -492,16 +317,16 @@ cat << 'HELP'
 ========================================
 COMANDOS:
   xoni-menu     : Menú interactivo
-  xoni-install  : Instalar herramientas (ej: xoni-install xonitube)
+  xoni-install  : Instalar herramientas
   sudo connmanctl : Configurar WiFi
 
 ATAJOS DE TECLADO:
-  Alt+Tab       : Cambiar entre ventanas
-  Alt+F4        : Cerrar ventana actual
-  Alt+F10       : Maximizar/restaurar ventana
-  Win+↑         : Maximizar ventana
-  Ctrl+Alt+T    : Nueva terminal (emergente, encima de la principal)
-  Win+x         : Abrir menú
+  Alt+Tab       : Cambiar ventana
+  Alt+F4        : Cerrar ventana
+  Alt+F10       : Maximizar
+  Win+↑         : Maximizar
+  Ctrl+Alt+T    : Nueva terminal
+  Win+x         : Menú
   Win+q         : Cerrar sesión
 
 RATÓN:
@@ -509,15 +334,11 @@ RATÓN:
   Click derecho     : Pegar texto
 
 COPIAR/PEGAR:
-  Ctrl+Shift+C  : Copiar selección
-  Ctrl+Shift+V  : Pegar
-  Ctrl+Insert   : Copiar
-  Shift+Insert  : Pegar
+  Ctrl+Shift+C/V, Ctrl+Insert/Shift+Insert
 
-CARACTERÍSTICAS ESPECIALES:
-  ✓ La terminal principal NO SE PUEDE CERRAR
-  ✓ Las ventanas emergentes se ven ENCIMA
-  ✓ El escritorio está OCULTO pero los controladores se conservan
+✓ Terminal principal NO SE PUEDE CERRAR
+✓ Ventanas emergentes se ven ENCIMA
+✓ Sistema conserva TODOS los controladores originales
 
 Repositorio: https://github.com/XONIDU/xoniant32
 HELP
@@ -533,20 +354,10 @@ echo "   by Darian Alberto Camacho Salas"
 echo "========================================"
 echo "Comandos: xoni-help, xoni-menu, xoni-install"
 echo ""
-echo "ATAJOS DE TECLADO:"
-echo "  Alt+Tab     : Cambiar ventana"
-echo "  Alt+F4      : Cerrar ventana"
-echo "  Alt+F10     : Maximizar"
-echo "  Win+↑       : Maximizar"
-echo "  Ctrl+Alt+T  : Nueva terminal"
-echo "  Win+x       : Menú"
-echo "  Win+q       : Cerrar sesión"
-echo ""
+echo "ATAJOS: Alt+Tab, Ctrl+Alt+T, Win+x, Win+q"
 echo "RATÓN: Seleccionar copia, click derecho pega"
-echo "COPIAR/PEGAR: Ctrl+Shift+C/V, Ctrl+Insert/Shift+Insert"
 echo ""
 echo "✓ Terminal principal NO SE PUEDE CERRAR"
-echo "✓ Ventanas emergentes se ven ENCIMA"
 echo "========================================"
 EOF
 
@@ -554,27 +365,19 @@ chown -R "$TARGET_USER":"$TARGET_USER" "$USER_HOME/.config" "$USER_HOME/.xinitrc
 chown -R "$TARGET_USER":"$TARGET_USER" "$USER_HOME/.Xresources" "$USER_HOME/.urxvt"
 
 # ============================================
-# 10. LIMPIEZA FINAL
-# ============================================
-info "Eliminando dependencias no usadas..."
-apt autoremove --purge -y
-
-info "Limpiando caché..."
-apt clean
-apt autoclean
-
-# ============================================
-# 11. FINALIZACIÓN
+# 8. FINALIZACIÓN
 # ============================================
 echo "========================================"
 echo "   INSTALACIÓN ULTIMATE COMPLETADA      "
 echo "========================================"
 echo ""
-echo "✅ CARACTERÍSTICAS ESPECIALES:"
+echo "✅ CARACTERÍSTICAS:"
 echo "   ✓ Terminal principal NO SE PUEDE CERRAR"
 echo "   ✓ Ventanas emergentes se ven ENCIMA"
+echo "   ✓ Click derecho pega, selección copia"
 echo "   ✓ Atajos completos de teclado"
-echo "   ✓ Soporte de ratón: seleccionar copia, click derecho pega"
+echo "   ✓ NO se eliminó NINGÚN paquete del sistema"
+echo "   ✓ Conserva TODOS los controladores originales"
 echo ""
 echo "✅ Para instalar xonitube:  xoni-install xonitube"
 echo "✅ Para abrir el menú:        xoni-menu"
