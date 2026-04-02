@@ -1,0 +1,7 @@
+URxvt.perl-ext-common: default,clipboard
+URxvt.clipboard.autocopy: true
+URxvt.keysym.Button3: eval:paste_clipboard
+URxvt.background: #000000
+URxvt.foreground: #00FF00
+URxvt.font: xft:Monospace:size=10
+URxvt.scrollBar: false

@@ -1,0 +1,21 @@
+# Ignorar otros repositorios
+../xoniant32/
+../xonical/
+../xonichat/
+../xonidate/
+../xonifesct/
+../xonispam/
+../xonity/
+../xoniweb/
+../personal/
+../XONIDU/
+
+# Ignorar archivos temporales
+*.log
+*.iso
+work/
+out/
+personal/
+../personal/
+personal/
+../personal/

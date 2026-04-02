@@ -1,0 +1,6 @@
+#!/bin/bash
+urxvt -name terminal_fija -bg black -fg green -geometry 1920x1080 -e bash -c "neofetch; echo 'Bienvenido a XONIARCH'; echo 'Win+x para menu'; exec bash" &
+nm-applet &
+picom --backend xrender --vsync &
+feh --bg-color "#000000" &
+xrdb -merge ~/.Xresources

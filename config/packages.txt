@@ -1,0 +1,25 @@
+# XONIARCH - Paquetes base
+openbox
+rxvt-unicode
+urxvt-perls
+xorg-server
+xorg-xinit
+xorg-xrandr
+feh
+picom
+networkmanager
+network-manager-applet
+mpv
+yt-dlp
+ffmpeg
+pulseaudio
+alsa-utils
+git
+curl
+wget
+nano
+vim
+fastfetch
+htop
+xclip
+xsel

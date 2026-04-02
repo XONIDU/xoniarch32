@@ -1,0 +1,13 @@
+========================================
+        XONIARCH - Sistema Base
+========================================
+
+Instrucciones:
+
+1. Conectate a internet:
+   sudo nmtui
+
+2. Ejecuta el instalador:
+   xoniarch-install
+
+========================================

@@ -1,0 +1,8 @@
+#!/bin/bash
+cat << 'HELP'
+XONIARCH - AYUDA
+Comandos: xoniarch-menu, xoniarch-install, xoniarch-update
+Atajos: Ctrl+Alt+T, Alt+Tab, Win+x, Win+q
+Raton: Seleccionar copia, click derecho pega
+Red: sudo nmtui
+HELP

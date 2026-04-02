@@ -1,0 +1,8 @@
+#!/bin/bash
+echo "========================================="
+echo "  XONIARCH - Instalador"
+echo "========================================="
+sudo pacman -Sy --noconfirm git
+sudo git clone https://github.com/XONIDU/xoniarch.git /opt/xoniarch
+sudo bash /opt/xoniarch/install-xoniarch.sh
+echo "Instalacion completada. Reinicia: sudo reboot"
