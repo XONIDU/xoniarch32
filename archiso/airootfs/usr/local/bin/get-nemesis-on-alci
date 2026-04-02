@@ -1,0 +1,51 @@
+#!/bin/bash
+#set -e
+##################################################################################################################
+# Author 	: Erik Dubois
+# Website   : https://www.erikdubois.be
+# Website   : https://www.xoniarch.online
+# Website	: https://www.xoniarch.info
+# Website	: https://www.xoniarch.com
+# Website	: https://www.xoniarchd.com
+# Website	: https://www.xoniarchb.com
+# Website	: https://www.xoniarchiso.com
+# Website	: https://www.xoniarchforum.com
+##################################################################################################################
+#
+#   DO NOT JUST RUN THIS. EXAMINE AND JUDGE. RUN AT YOUR OWN RISK.
+#
+##################################################################################################################
+#tput setaf 0 = black 
+#tput setaf 1 = red 
+#tput setaf 2 = green
+#tput setaf 3 = yellow 
+#tput setaf 4 = dark blue 
+#tput setaf 5 = purple
+#tput setaf 6 = cyan 
+#tput setaf 7 = gray 
+#tput setaf 8 = light blue
+##################################################################################################################
+
+#iso=xoniarch-iso
+
+echo
+tput setaf 3
+echo "################################################################"
+echo "################### Start clone xoniarch-nemesis"
+echo "################################################################"
+tput sgr0
+echo
+
+sudo pacman -Sy git --noconfirm --needed
+
+[ -d $HOME"/DATA" ] || mkdir -p $HOME"/DATA"
+cd ~/DATA
+git clone https://github.com/erikdubois/xoniarch-nemesis
+
+echo
+tput setaf 3
+echo "################################################################"
+echo "################### End clone xoniarch-nemesis"
+echo "################################################################"
+tput sgr0
+echo

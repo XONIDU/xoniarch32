@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<openbox_config>
+  <applications>
+    <application name="terminal_fija" class="URxvt">
+      <decor>no</decor>
+      <maximized>yes</maximized>
+      <layer>below</layer>
+    </application>
+    <application class="Mpv"><layer>above</layer></application>
+  </applications>
+  <keyboard>
+    <keybind key="C-A-t"><action name="Execute"><command>urxvt</command></action></keybind>
+    <keybind key="A-Tab"><action name="NextWindow"/></keybind>
+    <keybind key="A-F4"><action name="Close"/></keybind>
+    <keybind key="W-Up"><action name="ToggleMaximize"/></keybind>
+    <keybind key="W-x"><action name="Execute"><command>xoniarch-menu</command></action></keybind>
+    <keybind key="W-q"><action name="Exit"/></keybind>
+  </keyboard>
+  <mouse>
+    <context name="Root">
+      <mousebind button="Right" action="Press">
+        <action name="ShowMenu"><menu>root-menu</menu></action>
+      </mousebind>
+    </context>
+  </mouse>
+</openbox_config>

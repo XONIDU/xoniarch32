@@ -1,0 +1,10 @@
+#!/bin/bash
+cat << 'EOF'
+XONIARCH - AYUDA
+Comandos: xoniarch-menu, xoniarch-install, xoniarch-update, xoniarch-help
+Atajos: Ctrl+Alt+T (nueva terminal), Alt+Tab (cambiar ventana)
+        Win+x (menu), Win+q (cerrar sesion)
+Raton: Seleccionar texto = copiar, Click derecho = pegar
+Red: sudo nmtui
+Actualizar: sudo xoniarch-update
+EOF
