@@ -1,0 +1,12 @@
+# XONIARCH - Paquetes base
+base base-devel linux linux-firmware
+xorg-server xorg-xinit xorg-xrandr
+openbox obconf obmenu
+rxvt-unicode urxvt-perls
+mpv yt-dlp ffmpeg
+pulseaudio alsa-utils
+feh picom
+networkmanager network-manager-applet
+git curl wget nano vim neofetch htop
+xclip xsel
+xf86-video-vesa xf86-video-fbdev

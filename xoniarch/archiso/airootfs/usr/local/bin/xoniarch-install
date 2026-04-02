@@ -1,0 +1,19 @@
+#!/bin/bash
+REPO_BASE="https://github.com/XONIDU"
+cd "$HOME"
+echo "Herramientas: xonitube, xonigraf, xonichat, xonimail"
+read -p "Instalar: " TOOL
+if [ -n "$TOOL" ]; then
+    [ -d "$TOOL" ] || git clone "$REPO_BASE/$TOOL.git"
+    if [ -f "$TOOL/start.py" ]; then
+        sudo ln -sf "$HOME/$TOOL/start.py" "/usr/local/bin/$TOOL"
+        sudo chmod +x "/usr/local/bin/$TOOL"
+        echo "$TOOL instalado"
+    elif [ -f "$TOOL/start.sh" ]; then
+        sudo ln -sf "$HOME/$TOOL/start.sh" "/usr/local/bin/$TOOL"
+        sudo chmod +x "/usr/local/bin/$TOOL"
+        echo "$TOOL instalado"
+    else
+        echo "Repositorio descargado en ~/$TOOL"
+    fi
+fi

@@ -1,0 +1,11 @@
+#!/bin/bash
+REPO="https://github.com/XONIDU/xoniarch.git"
+DIR="/opt/xoniarch"
+if [ ! -d "$DIR" ]; then
+    sudo git clone "$REPO" "$DIR"
+else
+    cd "$DIR" && sudo git pull
+fi
+sudo cp "$DIR"/xoniarch-* /usr/local/bin/ 2>/dev/null || true
+sudo chmod +x /usr/local/bin/xoniarch-*
+echo "XONIARCH actualizado"
