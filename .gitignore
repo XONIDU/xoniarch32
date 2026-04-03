@@ -1,21 +1,45 @@
-# Ignorar otros repositorios
-../xoniant32/
-../xonical/
-../xonichat/
-../xonidate/
-../xonifesct/
-../xonispam/
-../xonity/
-../xoniweb/
-../personal/
-../XONIDU/
-
-# Ignorar archivos temporales
-*.log
+# ISOs generadas
 *.iso
+*.iso.sha1
+*.iso.sha256
+*.iso.md5
+
+# Archivos de log
+*.log
+*.log.*
+
+# Directorios temporales de construccion
 work/
 out/
-personal/
-../personal/
-personal/
-../personal/
+xoniarch-build/
+xoniarch-build/
+
+# Archivos temporales de archiso
+archiso/work/
+archiso/out/
+
+# Archivos de respaldo
+*.bak
+*.backup
+*.swp
+*.swo
+*~
+
+# Archivos del sistema
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Archivos de pacman
+/var/cache/pacman/pkg/
+
+# Archivos de booteo
+boot.log
+build.log
+
+# ISO generada localmente
+xoniarch--x86_64.iso
+xoniarch.iso
+
+# Directorio de git embebido
+XONIDU/
