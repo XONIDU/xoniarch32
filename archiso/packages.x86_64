@@ -274,3 +274,5 @@ git
 #grub theme
 alci-grub-theme-git
 git
+networkmanager
+network-manager-applet

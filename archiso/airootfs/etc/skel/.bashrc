@@ -12,3 +12,5 @@ PS1='[\u@\h \W]\$ '
 #ALCI
 ########
 alias evb='sudo systemctl enable --now vboxservice.service'
+# Ejecutar menu automaticamente al abrir terminal
+/usr/local/bin/xoniarch-menu

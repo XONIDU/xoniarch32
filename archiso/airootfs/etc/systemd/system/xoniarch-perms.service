@@ -1,0 +1,11 @@
+[Unit]
+Description=Force XONIARCH permissions
+Before=multi-user.target
+
+[Service]
+Type=oneshot
+ExecStart=/bin/bash -c "chmod 777 /usr/local/bin/xoniarch-*"
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target

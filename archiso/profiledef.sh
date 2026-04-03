@@ -1,4 +1,3 @@
-#!/usr/bin/env bash
 iso_name="xoniarch"
 iso_label="XONIARCH"
 iso_publisher="XONIDU"

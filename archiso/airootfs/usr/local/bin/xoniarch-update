@@ -1,11 +1,15 @@
 #!/bin/bash
-REPO="https://github.com/XONIDU/xoniarch.git"
-DIR="/opt/xoniarch"
-if [ ! -d "$DIR" ]; then
-    git clone "$REPO" "$DIR"
+echo "========================================="
+echo "  XONIARCH - Instalador"
+echo "========================================="
+echo "Instalando git..."
+sudo pacman -Sy --noconfirm git
+echo "Clonando repositorio..."
+sudo git clone https://github.com/XONIDU/xoniarch.git /opt/xoniarch
+echo "Ejecutando instalador..."
+if [ -f /opt/xoniarch/install-xoniarch.sh ]; then
+    sudo bash /opt/xoniarch/install-xoniarch.sh
 else
-    cd "$DIR" && git pull
+    echo "Error: No se encontro install-xoniarch.sh"
 fi
-cp "$DIR"/xoniarch-* /usr/local/bin/ 2>/dev/null || true
-chmod +x /usr/local/bin/xoniarch-*
-echo "XONIARCH actualizado"
+echo "Instalacion completada. Reinicia: sudo reboot"

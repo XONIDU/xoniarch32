@@ -4,23 +4,43 @@ while true; do
     echo "========================================"
     echo "       XONIARCH - MENU PRINCIPAL"
     echo "========================================"
-    echo "1) Nueva terminal"
-    echo "2) Configurar red (nmtui)"
-    echo "3) Reproducir YouTube"
-    echo "4) Instalar herramienta XONI"
-    echo "5) Actualizar sistema"
-    echo "6) Detectar hardware"
-    echo "7) Ayuda"
-    echo "8) Salir"
+    echo "1) Configurar red (nmtui)"
+    echo "2) Instalar XONIARCH"
+    echo "3) Actualizar sistema"
+    echo "4) Ayuda"
+    echo "5) Salir"
+    echo "========================================"
     read -p "Opcion: " opt
     case $opt in
-        1) urxvt & ;;
-        2) urxvt -e nmtui ;;
-        3) read -p "URL: " url; mpv "$url" ;;
-        4) urxvt -e xoniarch-install ;;
-        5) urxvt -e sudo xoniarch-update ;;
-        6) urxvt -e sudo xoniarch-detect-hardware ;;
-        7) xoniarch-help ;;
-        8) exit 0 ;;
+        1) 
+            echo "Abriendo nmtui..."
+            nmtui
+            ;;
+        2) 
+            echo "Instalando XONIARCH..."
+            /usr/local/bin/xoniarch-install
+            ;;
+        3) 
+            echo "Actualizando sistema..."
+            /usr/local/bin/xoniarch-update
+            ;;
+        4) 
+            echo "========================================"
+            echo "COMANDOS DISPONIBLES:"
+            echo "  xoniarch-menu      - Este menu"
+            echo "  xoniarch-install   - Instalar XONIARCH"
+            echo "  xoniarch-update    - Actualizar sistema"
+            echo "  nmtui              - Configurar red"
+            echo "========================================"
+            read -p "Presiona Enter para continuar..."
+            ;;
+        5) 
+            echo "Saliendo..."
+            exit 0
+            ;;
+        *)
+            echo "Opcion invalida"
+            sleep 1
+            ;;
     esac
 done

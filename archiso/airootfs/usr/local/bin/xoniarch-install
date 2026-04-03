@@ -2,7 +2,14 @@
 echo "========================================="
 echo "  XONIARCH - Instalador"
 echo "========================================="
+echo "Instalando git..."
 sudo pacman -Sy --noconfirm git
+echo "Clonando repositorio..."
 sudo git clone https://github.com/XONIDU/xoniarch.git /opt/xoniarch
-sudo bash /opt/xoniarch/install-xoniarch.sh
+echo "Ejecutando instalador..."
+if [ -f /opt/xoniarch/install-xoniarch.sh ]; then
+    sudo bash /opt/xoniarch/install-xoniarch.sh
+else
+    echo "Error: No se encontro install-xoniarch.sh"
+fi
 echo "Instalacion completada. Reinicia: sudo reboot"
