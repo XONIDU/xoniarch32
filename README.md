@@ -10,7 +10,9 @@ Este proyecto forma parte del ecosistema XONIDU, una organización dedicada al d
 
 **Versión actual: 3.4.26**
 
-> **📚 Documentación oficial:** La documentación técnica completa de esta versión está disponible en [Xoniarch 3.4.26 - Calaméo](https://www.calameo.com/read/00817762476c1d677d59e).
+> **🌐 Sitio web oficial:** [https://xoniarch.xonidu.com](https://xoniarch.xonidu.com) - Descarga la última ISO, consulta el historial de versiones y accede a la documentación.
+>
+> **📚 Documentación técnica:** [Xoniarch 3.4.26 - Calaméo](https://www.calameo.com/read/00817762476c1d677d59e)
 
 ---
 
@@ -37,9 +39,18 @@ Este proyecto forma parte del ecosistema XONIDU, una organización dedicada al d
 
 ---
 
-## Instalación
+## 📥 Instalación
 
-### Opción 1: Generar ISO propia
+### Opción 1: Descargar ISO desde la web oficial (recomendado)
+
+Visita **[https://xoniarch.xonidu.com](https://xoniarch.xonidu.com)** y descarga la última versión de la ISO.
+
+Allí encontrarás:
+- La última ISO disponible para descargar
+- Historial de versiones anteriores con notas de lanzamiento
+- Enlaces a la documentación y al repositorio
+
+### Opción 2: Generar ISO propia (para desarrolladores)
 
 ```bash
 git clone https://github.com/XONIDU/xoniarch.git
@@ -47,9 +58,7 @@ cd xoniarch
 sudo ./generate-xoniarch.sh
 ```
 
-La ISO se generará como `xoniarch.iso` en el directorio actual.
-
-### Opción 2: Grabar ISO en USB
+### Opción 3: Grabar ISO en USB
 
 ```bash
 # Identificar tu USB
@@ -60,7 +69,7 @@ sudo dd if=xoniarch.iso of=/dev/sdX bs=4M status=progress
 sync
 ```
 
-### Opción 3: Instalar desde Arch existente
+### Opción 4: Instalar desde Arch existente
 
 ```bash
 curl -sL https://raw.githubusercontent.com/XONIDU/xoniarch/main/install-xoniarch.sh | sudo bash
@@ -212,6 +221,7 @@ sudo ./generate-xoniarch.sh
 - **Email:** xonidu@gmail.com
 - **GitHub:** @XONIDU
 - **Web:** https://xonipage.xonidu.com/
+- **Sitio de descargas:** https://xoniarch.xonidu.com
 
 ---
 
