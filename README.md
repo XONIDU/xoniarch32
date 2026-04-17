@@ -11,7 +11,7 @@ Este proyecto forma parte del ecosistema **XONIDU**, una organización dedicada 
 **Versión actual:** 16.4.26
 
 - 🌐 **Sitio web oficial:** [https://xoniarch.xonidu.com](https://xoniarch.xonidu.com) – Descarga la última ISO, consulta el historial de versiones y accede a la documentación.
-- 📚 **Documentación técnica completa:** [Xoniarch 3.4.26 en Calaméo](https://www.calameo.com/read/00817762450b43c8e8769)
+- 📚 **Documentación técnica completa:** [Xoniarch 16.4.26 en Calaméo](https://www.calameo.com/read/00817762450b43c8e8769)
 
 ## Características
 
