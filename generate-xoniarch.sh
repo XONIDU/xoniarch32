@@ -3,6 +3,12 @@ echo "========================================="
 echo "Generando XONIARCH ISO"
 echo "========================================="
 
+# Verificar e instalar archiso si es necesario
+if ! command -v mkarchiso &> /dev/null; then
+    echo "mkarchiso no encontrado. Instalando archiso..."
+    sudo pacman -S --noconfirm archiso
+fi
+
 buildFolder="$HOME/xoniarch-build"
 outFolder="$(pwd)"
 
