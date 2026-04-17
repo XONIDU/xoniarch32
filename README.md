@@ -1,54 +1,45 @@
-# XONIARCH v.3.4.26
+# XONIARCH v.16.4.26
 
-by Darian Alberto Camacho Salas
+**by Darian Alberto Camacho Salas**
 
 ## Descripción
 
-XONIARCH es una distribución Linux especializada que transforma Arch Linux en un entorno de terminal gráfica fija, diseñada específicamente para hardware de 64 bits con recursos limitados.
+XONIARCH es una distribución Linux especializada que transforma Arch Linux en un entorno de **terminal gráfica fija**, diseñada específicamente para hardware de **64 bits con recursos limitados**.
 
-Este proyecto forma parte del ecosistema XONIDU, una organización dedicada al desarrollo de código abierto con énfasis en automatización, optimización de recursos y democratización del acceso a herramientas tecnológicas eficientes.
+Este proyecto forma parte del ecosistema **XONIDU**, una organización dedicada al desarrollo de código abierto con énfasis en automatización, optimización de recursos y democratización del acceso a herramientas tecnológicas eficientes.
 
-**Versión actual: 3.4.26**
+**Versión actual:** 16.4.26
 
-> **🌐 Sitio web oficial:** [https://xoniarch.xonidu.com](https://xoniarch.xonidu.com) - Descarga la última ISO, consulta el historial de versiones y accede a la documentación.
->
-> **📚 Documentación técnica:** [Xoniarch 3.4.26 - Calaméo](https://www.calameo.com/read/00817762476c1d677d59e)
-
----
+- 🌐 **Sitio web oficial:** [https://xoniarch.xonidu.com](https://xoniarch.xonidu.com) – Descarga la última ISO, consulta el historial de versiones y accede a la documentación.
+- 📚 **Documentación técnica completa:** [Xoniarch 3.4.26 en Calaméo](https://www.calameo.com/read/00817762450b43c8e8769)
 
 ## Características
 
-- Terminal principal fija que ocupa toda la pantalla, sin bordes, sin botón de cerrar
-- Ventanas emergentes (mpv, nuevas terminales) se ven ENCIMA
-- Soporte completo de ratón: seleccionar texto copia, click derecho pega
-- Atajos de teclado: Ctrl+Alt+T, Alt+Tab, Win+x, Win+q
-- Actualización desde GitHub: `xoniarch-update`
-- Instalación modular: `xoniarch-install`
-- Detección automática de hardware
-
----
+- Terminal principal fija que ocupa toda la pantalla, sin bordes, sin botón de cerrar.
+- Ventanas emergentes (mpv, nuevas terminales) se ven **ENCIMA**.
+- Soporte completo de ratón: seleccionar texto copia, click derecho pega.
+- Atajos de teclado: `Ctrl+Alt+T`, `Alt+Tab`, `Win+x`, `Win+q`.
+- Actualización desde GitHub: `xoniarch-update`.
+- Instalación modular: `xoniarch-install`.
+- Detección automática de hardware.
 
 ## Requisitos
 
-| Requisito | Mínimo | Recomendado |
-|-----------|--------|-------------|
-| Procesador | 64 bits (x86_64) | Intel Core i3 o superior |
-| RAM | 1 GB | 2 GB |
-| Espacio en disco | 8 GB | 10 GB |
-| Conexión a internet | Sí (para instalar) | Sí |
-
----
+| Requisito       | Mínimo             | Recomendado          |
+|----------------|--------------------|----------------------|
+| Procesador     | 64 bits (x86_64)   | Intel Core i3 o superior |
+| RAM            | 1 GB               | 2 GB                 |
+| Espacio en disco | 8 GB              | 10 GB                |
+| Conexión a internet | Sí (para instalar) | Sí                   |
 
 ## 📥 Instalación
 
 ### Opción 1: Descargar ISO desde la web oficial (recomendado)
 
-Visita **[https://xoniarch.xonidu.com](https://xoniarch.xonidu.com)** y descarga la última versión de la ISO.
-
-Allí encontrarás:
-- La última ISO disponible para descargar
-- Historial de versiones anteriores con notas de lanzamiento
-- Enlaces a la documentación y al repositorio
+Visita [https://xoniarch.xonidu.com](https://xoniarch.xonidu.com) y descarga la última versión de la ISO. Allí encontrarás:
+- La última ISO disponible para descargar.
+- Historial de versiones anteriores con notas de lanzamiento.
+- Enlaces a la documentación y al repositorio.
 
 ### Opción 2: Generar ISO propia (para desarrolladores)
 
@@ -75,8 +66,6 @@ sync
 curl -sL https://raw.githubusercontent.com/XONIDU/xoniarch/main/install-xoniarch.sh | sudo bash
 ```
 
----
-
 ## Comandos del Sistema
 
 | Comando | Descripción |
@@ -86,8 +75,6 @@ curl -sL https://raw.githubusercontent.com/XONIDU/xoniarch/main/install-xoniarch
 | `xoniarch-update` | Actualizar el sistema desde GitHub |
 | `xoniarch-help` | Mostrar ayuda rápida |
 | `xoniarch-detect-hardware` | Detectar e instalar controladores |
-
----
 
 ## Atajos de Teclado
 
@@ -100,14 +87,10 @@ curl -sL https://raw.githubusercontent.com/XONIDU/xoniarch/main/install-xoniarch
 | `Win+x` | Abrir menú principal |
 | `Win+q` | Cerrar sesión |
 
----
-
 ## Ratón
 
-- **Seleccionar texto** → Copia automáticamente al portapapeles
-- **Click derecho** → Pega el texto copiado
-
----
+- Seleccionar texto → Copia automáticamente al portapapeles.
+- Click derecho → Pega el texto copiado.
 
 ## Red
 
@@ -115,23 +98,17 @@ curl -sL https://raw.githubusercontent.com/XONIDU/xoniarch/main/install-xoniarch
 sudo nmtui
 ```
 
----
-
 ## Volumen
 
 ```bash
 alsamixer
 ```
 
----
-
 ## Actualización del Sistema
 
 ```bash
 sudo xoniarch-update
 ```
-
----
 
 ## Herramientas Disponibles
 
@@ -146,8 +123,6 @@ xoniarch-install xonidate    # Citas aleatorias
 xoniarch-install xonimet     # Extractor de metadatos
 xoniarch-install xoniweb     # Análisis de malware
 ```
-
----
 
 ## Estructura del Repositorio
 
@@ -169,18 +144,13 @@ xoniarch/
 └── README.md                # Este archivo
 ```
 
----
-
 ## Personalización
 
 Edita los archivos `.txt` en `config/` para modificar:
-
-- Paquetes a instalar
-- Atajos de teclado
-- Apariencia de la terminal
-- Mensajes de bienvenida
-
----
+- Paquetes a instalar.
+- Atajos de teclado.
+- Apariencia de la terminal.
+- Mensajes de bienvenida.
 
 ## Solución de Problemas
 
@@ -204,28 +174,18 @@ sudo rm -rf ~/xoniarch-build
 sudo ./generate-xoniarch.sh
 ```
 
----
-
 ## Hardware Probado
 
-- VirtualBox / QEMU
-- PC con Intel Core i3/i5/i7
-- PC con AMD Ryzen
-- Hardware genérico de 64 bits
-
----
+- VirtualBox / QEMU.
+- PC con Intel Core i3/i5/i7.
+- PC con AMD Ryzen.
+- Hardware genérico de 64 bits.
 
 ## Créditos
 
 - **Autor:** Darian Alberto Camacho Salas
 - **Email:** xonidu@gmail.com
-- **GitHub:** @XONIDU
-- **Web:** https://xonipage.xonidu.com/
-- **Sitio de descargas:** https://xoniarch.xonidu.com
-
----
-
-## Licencia
-
-Código abierto. Libre de modificar y adaptar.
+- **GitHub:** [@XONIDU](https://github.com/XONIDU)
+- **Web:** [https://xonipage.xonidu.com/](https://xonipage.xonidu.com/)
+- **Sitio de descargas:** [https://xoniarch.xonidu.com](https://xoniarch.xonidu.com)
 
