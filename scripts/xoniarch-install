@@ -1,12 +1,83 @@
 #!/bin/bash
-REPO_BASE="https://github.com/XONIDU"
-cd "$HOME"
-echo "Herramientas: xonitube, xonigraf, xonichat, xonimail"
-read -p "Nombre: " TOOL
-if [ -n "$TOOL" ]; then
-    [ -d "$TOOL" ] || git clone "$REPO_BASE/$TOOL.git"
-    if [ -f "$TOOL/start.py" ]; then
-        sudo ln -sf "$HOME/$TOOL/start.py" "/usr/local/bin/$TOOL"
-        echo "$TOOL instalado"
+# ============================================================================
+# xoniarch-install - Instalador unificado de XONIARCH
+# ============================================================================
+# - En entorno live: instala el sistema en disco duro (pregunta disco, usuario, etc.)
+# - En sistema instalado: instala herramientas XONI desde GitHub
+# ============================================================================
+
+set -e
+
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+NC='\033[0m'
+
+# Detectar si estamos en un entorno live (ISO booteada)
+is_live_environment() {
+    if [ -d "/run/archiso/cowspace" ] || [ -f "/etc/archiso" ]; then
+        return 0
+    else
+        return 1
     fi
+}
+
+# Instalador del sistema (desde live)
+install_system() {
+    echo -e "${BLUE}========================================${NC}"
+    echo -e "${BLUE}   Instalación de XONIARCH en disco duro${NC}"
+    echo -e "${BLUE}========================================${NC}"
+    echo ""
+    SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+    if [ -f "$SCRIPT_DIR/../install-xoniarch.sh" ]; then
+        sudo bash "$SCRIPT_DIR/../install-xoniarch.sh"
+    elif [ -f "/opt/xoniarch/install-xoniarch.sh" ]; then
+        sudo bash /opt/xoniarch/install-xoniarch.sh
+    else
+        echo -e "${RED}Error: No se encuentra install-xoniarch.sh${NC}"
+        exit 1
+    fi
+}
+
+# Instalador de herramientas (en sistema ya instalado)
+install_tools() {
+    REPO_BASE="https://github.com/XONIDU"
+    cd "$HOME"
+    echo "========================================="
+    echo "  XONIARCH - Instalador de herramientas"
+    echo "========================================="
+    echo "Herramientas disponibles: xonitube, xonigraf, xonichat, xonimail"
+    read -p "Nombre de la herramienta: " TOOL
+    if [ -n "$TOOL" ]; then
+        if [ -d "$TOOL" ]; then
+            cd "$TOOL" && git pull
+        else
+            git clone "$REPO_BASE/$TOOL.git"
+            cd "$TOOL"
+        fi
+        if [ -f "start.py" ]; then
+            sudo ln -sf "$HOME/$TOOL/start.py" "/usr/local/bin/$TOOL"
+            sudo chmod +x "/usr/local/bin/$TOOL"
+            echo "$TOOL instalado correctamente"
+        elif [ -f "start.sh" ]; then
+            sudo ln -sf "$HOME/$TOOL/start.sh" "/usr/local/bin/$TOOL"
+            sudo chmod +x "/usr/local/bin/$TOOL"
+            echo "$TOOL instalado correctamente"
+        else
+            echo "Repositorio descargado en ~/$TOOL"
+            echo "No se encontró start.py ni start.sh"
+        fi
+    fi
+}
+
+# ============================================================================
+# Main
+# ============================================================================
+if is_live_environment; then
+    echo -e "${YELLOW}Entorno live detectado. Iniciando instalación del sistema...${NC}"
+    install_system
+else
+    echo -e "${YELLOW}Sistema instalado detectado. Iniciando instalación de herramientas...${NC}"
+    install_tools
 fi
